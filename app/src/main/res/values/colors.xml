@@ -1,0 +1,9 @@
+<resources>
+    <color name="primary">#00E5FF</color>
+    <color name="on_primary">#000000</color>
+    <color name="background">#0F172A</color>
+    <color name="surface">#1E293B</color>
+    <color name="hazard_green">#10B981</color>
+    <color name="hazard_yellow">#F59E0B</color>
+    <color name="hazard_red">#EF4444</color>
+</resources>

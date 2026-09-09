@@ -1,0 +1,141 @@
+package com.ergovision.app.ui.components
+
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.ergovision.app.data.model.HazardState
+import com.ergovision.app.data.model.Point2D
+import com.ergovision.app.data.model.PostureMetrics
+import com.ergovision.app.ui.theme.HazardGreen
+import com.ergovision.app.ui.theme.HazardRed
+import com.ergovision.app.ui.theme.HazardYellow
+
+@Composable
+fun PostureHud(
+    metrics: PostureMetrics,
+    state: HazardState,
+    modifier: Modifier = Modifier
+) {
+    val stateColor = when (state) {
+        HazardState.SAFE -> HazardGreen
+        HazardState.EVALUATING -> HazardYellow
+        HazardState.TRIGGERED -> HazardRed
+        HazardState.COOLDOWN -> Color.Gray
+    }
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(stateColor.copy(alpha = 0.85f), RoundedCornerShape(8.dp))
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "STATUS: ${state.name}",
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp
+            )
+            if (metrics.detectedHazard != null) {
+                Text(
+                    text = metrics.detectedHazard.name,
+                    color = Color.White,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 12.sp
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xAA1E293B), RoundedCornerShape(8.dp))
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.SpaceAround
+        ) {
+            MetricItem("TRUNK", "${metrics.trunkAngleDegrees.toInt()}°")
+            MetricItem("NECK", "${metrics.neckAngleDegrees.toInt()}°")
+            MetricItem("ARM", "${metrics.shoulderAngleDegrees.toInt()}°")
+            MetricItem("SCORE", String.format("%.1f", metrics.rawHazardScore))
+        }
+    }
+}
+
+@Composable
+fun SkeletonOverlay(
+    landmarks: List<Point2D>,
+    hazardActive: Boolean,
+    modifier: Modifier = Modifier
+) {
+    if (landmarks.size < 25) return
+
+    val boneColor = if (hazardActive) HazardRed else HazardGreen
+
+    Canvas(modifier = modifier.fillMaxSize()) {
+        val w = size.width
+        val h = size.height
+
+        fun pt(index: Int): Offset = Offset(landmarks[index].x * w, landmarks[index].y * h)
+
+        fun drawBone(i1: Int, i2: Int) {
+            if (i1 < landmarks.size && i2 < landmarks.size) {
+                drawLine(
+                    color = boneColor,
+                    start = pt(i1),
+                    end = pt(i2),
+                    strokeWidth = 6f
+                )
+            }
+        }
+
+        // Connect key posture landmarks
+        drawBone(11, 12) // Shoulders
+        drawBone(11, 23) // Left torso
+        drawBone(12, 24) // Right torso
+        drawBone(23, 24) // Hips
+        drawBone(11, 13) // Left upper arm
+        drawBone(13, 15) // Left forearm
+        drawBone(12, 14) // Right upper arm
+        drawBone(14, 16) // Right forearm
+        drawBone(11, 7)  // Left neck
+        drawBone(12, 8)  // Right neck
+
+        // Draw joint points
+        val joints = listOf(11, 12, 13, 14, 15, 16, 23, 24, 7, 8)
+        for (idx in joints) {
+            if (idx < landmarks.size) {
+                drawCircle(
+                    color = Color.White,
+                    radius = 8f,
+                    center = pt(idx)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun MetricItem(label: String, value: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(text = label, color = Color.LightGray, fontSize = 11.sp)
+        Text(text = value, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+    }
+}

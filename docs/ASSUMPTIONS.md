@@ -1,0 +1,12 @@
+# Operational Assumptions & Human Validation Checklist (ASSUMPTIONS.md)
+
+The following technical and operational assumptions were established based on the Master Build Plan. Each item must be validated with hackathon organisers or confirmed on the physical loaner device during Phase 0 check-in.
+
+| Assumption ID | Category | Assumption Description | Impact if Invalid | Validation Action at Check-In |
+|---|---|---|---|---|
+| **ASM-001** | Red Light Access | Scenario A applies: Laptop is reachable via Office Kit Remote Control during Red Light. | If Scenario B applies (phone-only native coding), IDE setup must move to Termux/mobile IDE immediately. | Inquire with track marshals: "Can we use Office Kit Remote Control to drive our laptop during Red Light?" |
+| **ASM-002** | HackTracker AI Metric | Any on-device ML inference (GPU or NPU) qualifies for the 15% Creative Phone Use score. | If NPU is strictly mandated, we must attempt NNAPI delegate for MediaPipe/LiteRT-LM. | Ask organisers: "Does on-device AI require Qualcomm Hexagon NPU specifically, or does GPU/CPU inference count?" |
+| **ASM-003** | Office Kit API Availability | Standard Office Kit features (Screen Mirror, Shared Clipboard, File Transfer) function over local P2P or USB bridge without external internet. | If Office Kit requires internet, offline story and demo bridge must adapt to local USB cable. | Pair phone and laptop during Phase 0 and disconnect external Wi-Fi to test cross-device clipboard and mirroring. |
+| **ASM-004** | Qualcomm GPU Stability | MediaPipe Tasks `pose_landmarker_lite.task` runs stably on the Adreno GPU delegate without driver crashes. | Must fall back to CPU delegate with multi-threading, which increases thermal load. | Run pre-event standalone APK on loaner hardware to inspect Logcat for OpenCL/OpenGL GPU delegate errors. |
+| **ASM-005** | Offline Voice Data | The loaner device has an offline English TTS voice pack pre-installed in the Android system image. | TTS initialization will fail or require downloading speech assets. | Execute `TextToSpeech.Engine.ACTION_CHECK_TTS_DATA` intent on first boot to confirm offline language availability. |
+| **ASM-006** | Workstation FOV | Workstation camera can be placed 1.5–2.5 meters away with a clear side-profile view of the worker's torso, head, and hips. | Occlusion of hips prevents 3D world landmark normalization. | Physically test camera field of view at standard table height with a volunteer worker. |
