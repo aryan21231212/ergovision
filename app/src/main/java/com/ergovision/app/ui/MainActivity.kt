@@ -60,6 +60,7 @@ class MainActivity : ComponentActivity() {
     private val currentState = mutableStateOf(HazardState.SAFE)
     private val isThermalThrottled = mutableStateOf(false)
     private val showLogsSheet = mutableStateOf(false)
+    private val isDimmedMode = mutableStateOf(false)
 
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -147,6 +148,7 @@ class MainActivity : ComponentActivity() {
                             eventCount = eventsList.size,
                             onCalibrateClick = { calibratePosture() },
                             onLogsClick = { showLogsSheet.value = true },
+                            onDimScreenClick = { isDimmedMode.value = true },
                             modifier = Modifier.align(Alignment.TopCenter)
                         )
 
@@ -156,14 +158,55 @@ class MainActivity : ComponentActivity() {
                                 .align(Alignment.BottomCenter)
                                 .fillMaxWidth()
                                 .background(Color(0xDD0F172A))
-                                .padding(16.dp),
+                                .padding(12.dp),
                             horizontalArrangement = Arrangement.SpaceEvenly
                         ) {
                             Button(onClick = { exportWeeklySummary() }) {
-                                Text("Sync Summary")
+                                Text("Sync Summary", fontSize = 12.sp)
                             }
                             Button(onClick = { exportCsvLogs() }) {
-                                Text("Export CSV")
+                                Text("Export CSV", fontSize = 12.sp)
+                            }
+                            OutlinedButton(onClick = {
+                                onHazardConfirmed(HazardType.TRUNK_FLEXION_SEVERE, 65f, 5.0f)
+                                Toast.makeText(this@MainActivity, "Simulated Hazard Alert", Toast.LENGTH_SHORT).show()
+                            }) {
+                                Text("Simulate", fontSize = 12.sp, color = Color.White)
+                            }
+                        }
+
+                        // OLED Low-Power / Privacy Dimmed Overlay
+                        if (isDimmedMode.value) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(Color.Black)
+                                    .clickable { isDimmedMode.value = false },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(16.dp)
+                                            .background(
+                                                if (currentState.value == HazardState.TRIGGERED) com.ergovision.app.ui.theme.HazardRed
+                                                else com.ergovision.app.ui.theme.HazardGreen,
+                                                androidx.compose.foundation.shape.CircleShape
+                                            )
+                                    )
+                                    Spacer(modifier = Modifier.height(14.dp))
+                                    Text(
+                                        text = "OLED Low-Power Monitoring Active",
+                                        color = Color(0xFF64748B),
+                                        fontSize = 13.sp,
+                                        fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
+                                    )
+                                    Text(
+                                        text = "Camera inference running • Tap anywhere to wake",
+                                        color = Color(0xFF475569),
+                                        fontSize = 11.sp
+                                    )
+                                }
                             }
                         }
 

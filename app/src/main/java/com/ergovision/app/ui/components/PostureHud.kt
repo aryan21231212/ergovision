@@ -30,6 +30,7 @@ fun PostureHud(
     eventCount: Int = 0,
     onCalibrateClick: () -> Unit = {},
     onLogsClick: () -> Unit = {},
+    onDimScreenClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val stateColor = when (state) {
@@ -119,6 +120,23 @@ fun PostureHud(
                         color = Color.Black,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(6.dp))
+
+                // Dim Button (OLED Battery Saver)
+                Box(
+                    modifier = Modifier
+                        .background(Color.DarkGray.copy(alpha = 0.6f), RoundedCornerShape(4.dp))
+                        .clickable { onDimScreenClick() }
+                        .padding(horizontal = 7.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = "Dim",
+                        color = Color.White,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
             }
