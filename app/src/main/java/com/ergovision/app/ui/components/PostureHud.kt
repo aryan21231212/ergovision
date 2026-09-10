@@ -28,11 +28,13 @@ fun PostureHud(
     state: HazardState,
     isThermalThrottled: Boolean = false,
     isPocketMode: Boolean = false,
+    isAudioMuted: Boolean = false,
     eventCount: Int = 0,
     onCalibrateClick: () -> Unit = {},
     onLogsClick: () -> Unit = {},
     onDimScreenClick: () -> Unit = {},
     onToggleModeClick: () -> Unit = {},
+    onToggleAudioClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val stateColor = when (state) {
@@ -91,14 +93,14 @@ fun PostureHud(
                     )
                 }
 
-                Spacer(modifier = Modifier.width(6.dp))
+                Spacer(modifier = Modifier.width(5.dp))
 
                 // Mode Toggle Button (Camera Mount vs Pocket/IMU)
                 Box(
                     modifier = Modifier
                         .background(if (isPocketMode) Color(0xFF6366F1) else Color(0xFF334155), RoundedCornerShape(4.dp))
                         .clickable { onToggleModeClick() }
-                        .padding(horizontal = 7.dp, vertical = 4.dp)
+                        .padding(horizontal = 6.dp, vertical = 4.dp)
                 ) {
                     Text(
                         text = if (isPocketMode) "Pocket" else "Mount",
@@ -108,31 +110,31 @@ fun PostureHud(
                     )
                 }
 
-                Spacer(modifier = Modifier.width(6.dp))
+                Spacer(modifier = Modifier.width(5.dp))
 
                 // Calibrate Button
                 Box(
                     modifier = Modifier
                         .background(Color.Black.copy(alpha = 0.35f), RoundedCornerShape(4.dp))
                         .clickable { onCalibrateClick() }
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                        .padding(horizontal = 7.dp, vertical = 4.dp)
                 ) {
                     Text(
-                        text = "Calibrate",
+                        text = "Calib",
                         color = Color.White,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold
                     )
                 }
 
-                Spacer(modifier = Modifier.width(6.dp))
+                Spacer(modifier = Modifier.width(5.dp))
 
                 // Logs Counter Button
                 Box(
                     modifier = Modifier
                         .background(BrandCyan.copy(alpha = 0.9f), RoundedCornerShape(4.dp))
                         .clickable { onLogsClick() }
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                        .padding(horizontal = 7.dp, vertical = 4.dp)
                 ) {
                     Text(
                         text = "Logs ($eventCount)",
@@ -142,14 +144,29 @@ fun PostureHud(
                     )
                 }
 
-                Spacer(modifier = Modifier.width(6.dp))
+                Spacer(modifier = Modifier.width(5.dp))
+
+                // Audio Mute/Unmute Button
+                Box(
+                    modifier = Modifier
+                        .background(Color.DarkGray.copy(alpha = 0.6f), RoundedCornerShape(4.dp))
+                        .clickable { onToggleAudioClick() }
+                        .padding(horizontal = 6.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = if (isAudioMuted) "🔇" else "🔊",
+                        fontSize = 11.sp
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(5.dp))
 
                 // Dim Button (OLED Battery Saver)
                 Box(
                     modifier = Modifier
                         .background(Color.DarkGray.copy(alpha = 0.6f), RoundedCornerShape(4.dp))
                         .clickable { onDimScreenClick() }
-                        .padding(horizontal = 7.dp, vertical = 4.dp)
+                        .padding(horizontal = 6.dp, vertical = 4.dp)
                 ) {
                     Text(
                         text = "Dim",
@@ -179,15 +196,38 @@ fun PostureHud(
     }
 }
 
+/**
+ * Segment-Level Ergonomic Skeleton Canvas.
+ * Colors individual body segments dynamically based on per-joint risk:
+ * - Trunk: Red (>60°), Yellow (>20°), Green (neutral)
+ * - Neck: Yellow (>20°), Green (neutral)
+ * - Arms: Red (>90°), Green (neutral)
+ */
 @Composable
 fun SkeletonOverlay(
     landmarks: List<Point2D>,
-    hazardActive: Boolean,
+    metrics: PostureMetrics,
     modifier: Modifier = Modifier
 ) {
     if (landmarks.size < 25) return
 
-    val boneColor = if (hazardActive) HazardRed else HazardGreen
+    val trunkColor = when {
+        metrics.trunkAngleDegrees > 60f -> HazardRed
+        metrics.trunkAngleDegrees > 20f -> HazardYellow
+        else -> HazardGreen
+    }
+
+    val neckColor = when {
+        metrics.neckAngleDegrees > 20f -> HazardYellow
+        else -> HazardGreen
+    }
+
+    val armColor = when {
+        metrics.shoulderAngleDegrees > 90f -> HazardRed
+        else -> HazardGreen
+    }
+
+    val neutralColor = HazardGreen
 
     Canvas(modifier = modifier.fillMaxSize()) {
         val w = size.width
@@ -195,28 +235,28 @@ fun SkeletonOverlay(
 
         fun pt(index: Int): Offset = Offset(landmarks[index].x * w, landmarks[index].y * h)
 
-        fun drawBone(i1: Int, i2: Int) {
+        fun drawBone(i1: Int, i2: Int, color: Color) {
             if (i1 < landmarks.size && i2 < landmarks.size) {
                 drawLine(
-                    color = boneColor,
+                    color = color,
                     start = pt(i1),
                     end = pt(i2),
-                    strokeWidth = 6f
+                    strokeWidth = 7f
                 )
             }
         }
 
-        // Connect key posture landmarks
-        drawBone(11, 12) // Shoulders
-        drawBone(11, 23) // Left torso
-        drawBone(12, 24) // Right torso
-        drawBone(23, 24) // Hips
-        drawBone(11, 13) // Left upper arm
-        drawBone(13, 15) // Left forearm
-        drawBone(12, 14) // Right upper arm
-        drawBone(14, 16) // Right forearm
-        drawBone(11, 7)  // Left neck
-        drawBone(12, 8)  // Right neck
+        // Draw segmented bones with individual joint risk colors
+        drawBone(11, 12, neutralColor) // Shoulders
+        drawBone(11, 23, trunkColor)   // Left torso
+        drawBone(12, 24, trunkColor)   // Right torso
+        drawBone(23, 24, neutralColor) // Hips
+        drawBone(11, 13, armColor)     // Left upper arm
+        drawBone(13, 15, armColor)     // Left forearm
+        drawBone(12, 14, armColor)     // Right upper arm
+        drawBone(14, 16, armColor)     // Right forearm
+        drawBone(11, 7, neckColor)     // Left neck
+        drawBone(12, 8, neckColor)     // Right neck
 
         // Draw joint points
         val joints = listOf(11, 12, 13, 14, 15, 16, 23, 24, 7, 8)
@@ -224,7 +264,7 @@ fun SkeletonOverlay(
             if (idx < landmarks.size) {
                 drawCircle(
                     color = Color.White,
-                    radius = 8f,
+                    radius = 7f,
                     center = pt(idx)
                 )
             }

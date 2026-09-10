@@ -65,6 +65,7 @@ class MainActivity : ComponentActivity() {
     private val isPocketMode = mutableStateOf(false)
     private val showLogsSheet = mutableStateOf(false)
     private val isDimmedMode = mutableStateOf(false)
+    private val isAudioMuted = mutableStateOf(false)
 
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -155,7 +156,7 @@ class MainActivity : ComponentActivity() {
                         if (!isPocketMode.value) {
                             SkeletonOverlay(
                                 landmarks = currentScreenLandmarks.value,
-                                hazardActive = currentState.value == HazardState.TRIGGERED
+                                metrics = currentMetrics.value
                             )
                         } else {
                             // Pocket mode indicator banner
@@ -190,11 +191,13 @@ class MainActivity : ComponentActivity() {
                             state = currentState.value,
                             isThermalThrottled = isThermalThrottled.value,
                             isPocketMode = isPocketMode.value,
+                            isAudioMuted = isAudioMuted.value,
                             eventCount = eventsList.size,
                             onCalibrateClick = { calibratePosture() },
                             onLogsClick = { showLogsSheet.value = true },
                             onDimScreenClick = { isDimmedMode.value = true },
                             onToggleModeClick = { togglePostureMode() },
+                            onToggleAudioClick = { isAudioMuted.value = !isAudioMuted.value },
                             modifier = Modifier.align(Alignment.TopCenter)
                         )
 
@@ -334,8 +337,10 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun onHazardConfirmed(hazardType: HazardType, peakAngle: Float, durationSec: Float) {
-        // Tier 1: Instant deterministic audio alert (<50ms)
-        ttsManager.triggerTemplateAlert(hazardType)
+        // Tier 1: Instant deterministic audio alert (<50ms) if not muted
+        if (!isAudioMuted.value) {
+            ttsManager.triggerTemplateAlert(hazardType)
+        }
 
         // Tier 2: Persist event and asynchronously synthesize LLM coaching
         lifecycleScope.launch {
