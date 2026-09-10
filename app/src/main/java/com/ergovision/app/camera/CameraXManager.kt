@@ -28,11 +28,24 @@ class CameraXManager(
     @Volatile
     var targetFrameIntervalMs: Long = 200L // 5 FPS throttle interval (200ms)
 
+    @Volatile
+    var isFrontCamera: Boolean = false
+        private set
+
+    private var currentSurfaceProvider: Preview.SurfaceProvider? = null
+
     fun setFrameInterval(intervalMs: Long) {
         targetFrameIntervalMs = intervalMs
     }
 
+    fun toggleCamera(): Boolean {
+        isFrontCamera = !isFrontCamera
+        startCamera(currentSurfaceProvider)
+        return isFrontCamera
+    }
+
     fun startCamera(previewSurfaceProvider: Preview.SurfaceProvider? = null) {
+        currentSurfaceProvider = previewSurfaceProvider
         val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
 
         cameraProviderFuture.addListener({
@@ -63,7 +76,11 @@ class CameraXManager(
                 }
             }
 
-            val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+            val cameraSelector = if (isFrontCamera) {
+                CameraSelector.DEFAULT_FRONT_CAMERA
+            } else {
+                CameraSelector.DEFAULT_BACK_CAMERA
+            }
 
             try {
                 cameraProvider.unbindAll()

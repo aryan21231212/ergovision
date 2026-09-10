@@ -40,6 +40,7 @@ import com.ergovision.app.pose.MediaPipePoseEstimator
 import com.ergovision.app.sensor.ImuPostureTracker
 import com.ergovision.app.service.CameraForegroundService
 import com.ergovision.app.tts.TtsAlertManager
+import com.ergovision.app.ui.components.ComplianceReportDialog
 import com.ergovision.app.ui.components.HazardLogSheet
 import com.ergovision.app.ui.components.PostureHud
 import com.ergovision.app.ui.components.SkeletonOverlay
@@ -66,6 +67,10 @@ class MainActivity : ComponentActivity() {
     private val showLogsSheet = mutableStateOf(false)
     private val isDimmedMode = mutableStateOf(false)
     private val isAudioMuted = mutableStateOf(false)
+    private val isFrontCamera = mutableStateOf(false)
+    private val showReportDialog = mutableStateOf(false)
+    private val generatedReportText = mutableStateOf("")
+    private val isGeneratingReport = mutableStateOf(false)
 
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -192,12 +197,19 @@ class MainActivity : ComponentActivity() {
                             isThermalThrottled = isThermalThrottled.value,
                             isPocketMode = isPocketMode.value,
                             isAudioMuted = isAudioMuted.value,
+                            isFrontCamera = isFrontCamera.value,
                             eventCount = eventsList.size,
                             onCalibrateClick = { calibratePosture() },
                             onLogsClick = { showLogsSheet.value = true },
                             onDimScreenClick = { isDimmedMode.value = true },
                             onToggleModeClick = { togglePostureMode() },
                             onToggleAudioClick = { isAudioMuted.value = !isAudioMuted.value },
+                            onToggleCameraClick = {
+                                if (::cameraManager.isInitialized) {
+                                    isFrontCamera.value = cameraManager.toggleCamera()
+                                    Toast.makeText(this@MainActivity, if (isFrontCamera.value) "Front Camera (Self-Test)" else "Back Camera (Mount)", Toast.LENGTH_SHORT).show()
+                                }
+                            },
                             modifier = Modifier.align(Alignment.TopCenter)
                         )
 
@@ -269,6 +281,24 @@ class MainActivity : ComponentActivity() {
                                         repository.clearLogs()
                                         Toast.makeText(this@MainActivity, "Logs cleared", Toast.LENGTH_SHORT).show()
                                     }
+                                }
+                            )
+                        }
+
+                        // On-Device LiteRT-LM Compliance Audit Report Sheet
+                        if (showReportDialog.value) {
+                            ComplianceReportDialog(
+                                reportText = generatedReportText.value,
+                                eventCount = eventsList.size,
+                                isLoading = isGeneratingReport.value,
+                                onDismiss = { showReportDialog.value = false },
+                                onCopyToClipboard = {
+                                    officeKitBridge.copyToSharedClipboard("ErgoVision Weekly Report", generatedReportText.value)
+                                    Toast.makeText(this@MainActivity, "Copied report to shared clipboard", Toast.LENGTH_SHORT).show()
+                                },
+                                onShareReport = {
+                                    val shareIntent = officeKitBridge.createShareIntent(generatedReportText.value)
+                                    startActivity(Intent.createChooser(shareIntent, "Share EHS Audit Report (Office Kit)"))
                                 }
                             )
                         }
@@ -359,11 +389,13 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun exportWeeklySummary() {
+        isGeneratingReport.value = true
+        showReportDialog.value = true
         lifecycleScope.launch {
             val recentEvents = repository.getRecentEvents(7 * 24 * 3600 * 1000L)
             val summaryText = llmCoach.generateWeeklySummary(recentEvents)
-            officeKitBridge.copyToSharedClipboard("ErgoVision Weekly Report", summaryText)
-            Toast.makeText(this@MainActivity, "Copied weekly summary to shared clipboard", Toast.LENGTH_SHORT).show()
+            generatedReportText.value = summaryText
+            isGeneratingReport.value = false
         }
     }
 

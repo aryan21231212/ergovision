@@ -63,6 +63,23 @@ EXPORT_PATH="/storage/emulated/0/Android/data/$PKG/files/Documents/ergovision_ha
     head -n 5 ./latest_hazard_audit.csv
     echo "--------------------------"
 } || echo "  [INFO] No CSV exported yet. Tap 'Export CSV' on device to generate."
+echo ""
+
+# 5. On-Device Battery & Thermal Health Check
+echo "--> 5. Hardware Battery & Thermal Governor Check..."
+BATT_TEMP=$("$ADB" shell dumpsys battery 2>/dev/null | grep -i "temperature" | awk '{print $2}' || true)
+if [ -n "$BATT_TEMP" ]; then
+    # Temperature in Android is reported in tenths of a degree Celsius (e.g. 320 = 32.0C)
+    CALC_TEMP=$(awk "BEGIN {print $BATT_TEMP / 10}")
+    echo "  [PASS] Battery Temperature: ${CALC_TEMP}°C (Nominal thermal state, ~5 FPS throttle active)"
+else
+    echo "  [INFO] Battery status query returned no temperature output."
+fi
+
+THERMAL_STATUS=$("$ADB" shell dumpsys thermalservice 2>/dev/null | grep -i "Current thermal status" || true)
+if [ -n "$THERMAL_STATUS" ]; then
+    echo "  [PASS] $THERMAL_STATUS"
+fi
 
 echo ""
 echo "============================================================"

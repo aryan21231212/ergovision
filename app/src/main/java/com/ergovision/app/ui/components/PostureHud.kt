@@ -29,12 +29,14 @@ fun PostureHud(
     isThermalThrottled: Boolean = false,
     isPocketMode: Boolean = false,
     isAudioMuted: Boolean = false,
+    isFrontCamera: Boolean = false,
     eventCount: Int = 0,
     onCalibrateClick: () -> Unit = {},
     onLogsClick: () -> Unit = {},
     onDimScreenClick: () -> Unit = {},
     onToggleModeClick: () -> Unit = {},
     onToggleAudioClick: () -> Unit = {},
+    onToggleCameraClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val stateColor = when (state) {
@@ -108,6 +110,25 @@ fun PostureHud(
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold
                     )
+                }
+
+                if (!isPocketMode) {
+                    Spacer(modifier = Modifier.width(5.dp))
+
+                    // Camera Flip (Front vs Back)
+                    Box(
+                        modifier = Modifier
+                            .background(Color(0xFF1E293B), RoundedCornerShape(4.dp))
+                            .clickable { onToggleCameraClick() }
+                            .padding(horizontal = 6.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = if (isFrontCamera) "Front" else "Back",
+                            color = Color.White,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.width(5.dp))
