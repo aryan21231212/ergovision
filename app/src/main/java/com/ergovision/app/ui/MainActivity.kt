@@ -20,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
@@ -36,6 +37,7 @@ import com.ergovision.app.debouncer.HazardDebouncer
 import com.ergovision.app.llm.LiteRtLmCoach
 import com.ergovision.app.math.RebaPoseAnalyzer
 import com.ergovision.app.pose.MediaPipePoseEstimator
+import com.ergovision.app.sensor.ImuPostureTracker
 import com.ergovision.app.service.CameraForegroundService
 import com.ergovision.app.tts.TtsAlertManager
 import com.ergovision.app.ui.components.HazardLogSheet
@@ -54,11 +56,13 @@ class MainActivity : ComponentActivity() {
     private lateinit var repository: HazardRepository
     private lateinit var llmCoach: LiteRtLmCoach
     private lateinit var officeKitBridge: OfficeKitBridge
+    private lateinit var imuTracker: ImuPostureTracker
 
     private val currentMetrics = mutableStateOf(PostureMetrics(0L, 0f, 0f, 0f, 0f, null))
     private val currentScreenLandmarks = mutableStateOf<List<Point2D>>(emptyList())
     private val currentState = mutableStateOf(HazardState.SAFE)
     private val isThermalThrottled = mutableStateOf(false)
+    private val isPocketMode = mutableStateOf(false)
     private val showLogsSheet = mutableStateOf(false)
     private val isDimmedMode = mutableStateOf(false)
 
@@ -94,14 +98,25 @@ class MainActivity : ComponentActivity() {
             }
         )
 
+        // Stretch H1: Low-power IMU Posture Tracker for pocket/clip usage
+        imuTracker = ImuPostureTracker(this) { metrics ->
+            if (isPocketMode.value) {
+                currentMetrics.value = metrics
+                currentScreenLandmarks.value = emptyList()
+                currentState.value = debouncer.processFrame(metrics)
+            }
+        }
+
         // Pose Estimator (MediaPipe Tasks Vision on GPU delegate)
         poseEstimator = MediaPipePoseEstimator(
             context = this,
             onPoseResult = { worldLandmarks, screenLandmarks, timestampMs ->
-                val metrics = poseAnalyzer.analyze(worldLandmarks, timestampMs)
-                currentMetrics.value = metrics
-                currentScreenLandmarks.value = screenLandmarks
-                currentState.value = debouncer.processFrame(metrics)
+                if (!isPocketMode.value) {
+                    val metrics = poseAnalyzer.analyze(worldLandmarks, timestampMs)
+                    currentMetrics.value = metrics
+                    currentScreenLandmarks.value = screenLandmarks
+                    currentState.value = debouncer.processFrame(metrics)
+                }
             },
             onError = { error ->
                 runOnUiThread { Toast.makeText(this, error, Toast.LENGTH_SHORT).show() }
@@ -125,7 +140,9 @@ class MainActivity : ComponentActivity() {
                                         context = this@MainActivity,
                                         lifecycleOwner = this@MainActivity,
                                         onFrameAvailable = { imageProxy ->
-                                            poseEstimator.processImageProxy(imageProxy)
+                                            if (!isPocketMode.value) {
+                                                poseEstimator.processImageProxy(imageProxy)
+                                            }
                                         }
                                     )
                                     cameraManager.startCamera(previewView.surfaceProvider)
@@ -134,21 +151,50 @@ class MainActivity : ComponentActivity() {
                             modifier = Modifier.fillMaxSize()
                         )
 
-                        // Live Skeleton Pose Overlay
-                        SkeletonOverlay(
-                            landmarks = currentScreenLandmarks.value,
-                            hazardActive = currentState.value == HazardState.TRIGGERED
-                        )
+                        // Live Skeleton Pose Overlay (shown only in camera mount mode)
+                        if (!isPocketMode.value) {
+                            SkeletonOverlay(
+                                landmarks = currentScreenLandmarks.value,
+                                hazardActive = currentState.value == HazardState.TRIGGERED
+                            )
+                        } else {
+                            // Pocket mode indicator banner
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.Center)
+                                    .background(Color(0xCC1E1B4B), androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+                                    .padding(20.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(
+                                        text = "📱 Pocket IMU Mode Active",
+                                        color = Color.White,
+                                        fontSize = 16.sp,
+                                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = "Clip device to chest pocket or belt.\nCamera sensor suspended to preserve power.",
+                                        color = Color(0xFFA5B4FC),
+                                        fontSize = 12.sp,
+                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                    )
+                                }
+                            }
+                        }
 
-                        // Top Ergonomic HUD with Calibrate & Log controls
+                        // Top Ergonomic HUD with Mode, Calibrate, and Logs controls
                         PostureHud(
                             metrics = currentMetrics.value,
                             state = currentState.value,
                             isThermalThrottled = isThermalThrottled.value,
+                            isPocketMode = isPocketMode.value,
                             eventCount = eventsList.size,
                             onCalibrateClick = { calibratePosture() },
                             onLogsClick = { showLogsSheet.value = true },
                             onDimScreenClick = { isDimmedMode.value = true },
+                            onToggleModeClick = { togglePostureMode() },
                             modifier = Modifier.align(Alignment.TopCenter)
                         )
 
@@ -240,14 +286,38 @@ class MainActivity : ComponentActivity() {
                 if (::cameraManager.isInitialized) {
                     cameraManager.setFrameInterval(if (throttled) 500L else 200L)
                 }
+
+                // Section H2 Thermal Synergy: Auto-switch to low-power IMU mode on severe heat
+                if (status >= PowerManager.THERMAL_STATUS_SEVERE && !isPocketMode.value) {
+                    togglePostureMode()
+                    Toast.makeText(this, "Thermal Protection: Auto-switched to low-power IMU mode", Toast.LENGTH_LONG).show()
+                }
             }
         }
     }
 
+    private fun togglePostureMode() {
+        val newMode = !isPocketMode.value
+        isPocketMode.value = newMode
+        if (newMode) {
+            imuTracker.start()
+            imuTracker.calibrateBaseline()
+            Toast.makeText(this, "Pocket/Clip IMU Mode Active (Camera suspended)", Toast.LENGTH_SHORT).show()
+        } else {
+            imuTracker.stop()
+            Toast.makeText(this, "Camera Mount Mode Active", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     private fun calibratePosture() {
-        val currentTrunk = currentMetrics.value.trunkAngleDegrees
-        poseAnalyzer.calibrateBaseline(currentTrunk)
-        Toast.makeText(this, "Neutral posture calibrated (zeroed at ${currentTrunk.toInt()}°)", Toast.LENGTH_SHORT).show()
+        if (isPocketMode.value) {
+            imuTracker.calibrateBaseline()
+            Toast.makeText(this, "Neutral standing baseline calibrated for Pocket IMU", Toast.LENGTH_SHORT).show()
+        } else {
+            val currentTrunk = currentMetrics.value.trunkAngleDegrees
+            poseAnalyzer.calibrateBaseline(currentTrunk)
+            Toast.makeText(this, "Neutral posture calibrated (zeroed at ${currentTrunk.toInt()}°)", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun checkAndRequestPermissions() {
@@ -307,6 +377,7 @@ class MainActivity : ComponentActivity() {
         if (::cameraManager.isInitialized) cameraManager.shutdown()
         if (::poseEstimator.isInitialized) poseEstimator.close()
         if (::ttsManager.isInitialized) ttsManager.shutdown()
+        if (::imuTracker.isInitialized) imuTracker.stop()
         debouncer.reset()
     }
 }

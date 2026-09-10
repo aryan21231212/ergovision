@@ -27,10 +27,12 @@ fun PostureHud(
     metrics: PostureMetrics,
     state: HazardState,
     isThermalThrottled: Boolean = false,
+    isPocketMode: Boolean = false,
     eventCount: Int = 0,
     onCalibrateClick: () -> Unit = {},
     onLogsClick: () -> Unit = {},
     onDimScreenClick: () -> Unit = {},
+    onToggleModeClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val stateColor = when (state) {
@@ -82,10 +84,27 @@ fun PostureHud(
                         .padding(horizontal = 6.dp, vertical = 3.dp)
                 ) {
                     Text(
-                        text = if (isThermalThrottled) "⚡ 2 FPS" else "5 FPS",
+                        text = if (isThermalThrottled) "⚡ 2 FPS" else if (isPocketMode) "📱 IMU" else "📷 5 FPS",
                         color = if (isThermalThrottled) HazardYellow else Color.White,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(6.dp))
+
+                // Mode Toggle Button (Camera Mount vs Pocket/IMU)
+                Box(
+                    modifier = Modifier
+                        .background(if (isPocketMode) Color(0xFF6366F1) else Color(0xFF334155), RoundedCornerShape(4.dp))
+                        .clickable { onToggleModeClick() }
+                        .padding(horizontal = 7.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = if (isPocketMode) "Pocket" else "Mount",
+                        color = Color.White,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
 
