@@ -27,6 +27,15 @@ class RebaPoseAnalyzer {
 
     // Vertical gravity reference vector (Y is down in MediaPipe space, so -Y is up)
     private val verticalVector = Point3D(0f, -1f, 0f)
+    private var baselineTrunkOffset: Float = 0f
+
+    fun calibrateBaseline(offset: Float) {
+        baselineTrunkOffset = offset
+    }
+
+    fun resetCalibration() {
+        baselineTrunkOffset = 0f
+    }
 
     fun analyze(worldLandmarks: List<Point3D>, timestampMs: Long): PostureMetrics {
         if (worldLandmarks.size < 25) {
@@ -52,7 +61,8 @@ class RebaPoseAnalyzer {
 
         // 1. Trunk Vector: Hip -> Shoulder vs Vertical
         val trunkVector = VectorMath.subtract(midShoulder, midHip)
-        val trunkFlexionAngle = VectorMath.angleBetween(trunkVector, verticalVector)
+        val rawTrunkFlexionAngle = VectorMath.angleBetween(trunkVector, verticalVector)
+        val trunkFlexionAngle = (rawTrunkFlexionAngle - baselineTrunkOffset).coerceAtLeast(0f)
 
         // 2. Neck Vector: Shoulder -> Ear vs Trunk Vector
         val neckVector = VectorMath.subtract(midEar, midShoulder)

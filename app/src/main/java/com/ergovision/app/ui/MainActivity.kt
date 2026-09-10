@@ -1,9 +1,12 @@
 package com.ergovision.app.ui
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -35,6 +38,7 @@ import com.ergovision.app.math.RebaPoseAnalyzer
 import com.ergovision.app.pose.MediaPipePoseEstimator
 import com.ergovision.app.service.CameraForegroundService
 import com.ergovision.app.tts.TtsAlertManager
+import com.ergovision.app.ui.components.HazardLogSheet
 import com.ergovision.app.ui.components.PostureHud
 import com.ergovision.app.ui.components.SkeletonOverlay
 import com.ergovision.app.ui.theme.ErgoVisionTheme
@@ -54,6 +58,8 @@ class MainActivity : ComponentActivity() {
     private val currentMetrics = mutableStateOf(PostureMetrics(0L, 0f, 0f, 0f, 0f, null))
     private val currentScreenLandmarks = mutableStateOf<List<Point2D>>(emptyList())
     private val currentState = mutableStateOf(HazardState.SAFE)
+    private val isThermalThrottled = mutableStateOf(false)
+    private val showLogsSheet = mutableStateOf(false)
 
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -75,6 +81,8 @@ class MainActivity : ComponentActivity() {
         llmCoach = LiteRtLmCoach().apply { initialize("models/gemma3_1b.bin") }
         officeKitBridge = OfficeKitBridge(this)
         poseAnalyzer = RebaPoseAnalyzer()
+
+        setupThermalMonitoring()
 
         // Time-based debouncer: 5-second sustained hazard trigger
         debouncer = HazardDebouncer(
@@ -101,6 +109,8 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             ErgoVisionTheme {
+                val eventsList by repository.allEventsFlow.collectAsState(initial = emptyList())
+
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
@@ -129,10 +139,14 @@ class MainActivity : ComponentActivity() {
                             hazardActive = currentState.value == HazardState.TRIGGERED
                         )
 
-                        // Top Ergonomic HUD
+                        // Top Ergonomic HUD with Calibrate & Log controls
                         PostureHud(
                             metrics = currentMetrics.value,
                             state = currentState.value,
+                            isThermalThrottled = isThermalThrottled.value,
+                            eventCount = eventsList.size,
+                            onCalibrateClick = { calibratePosture() },
+                            onLogsClick = { showLogsSheet.value = true },
                             modifier = Modifier.align(Alignment.TopCenter)
                         )
 
@@ -152,12 +166,45 @@ class MainActivity : ComponentActivity() {
                                 Text("Export CSV")
                             }
                         }
+
+                        // Hazard Log Inspector Sheet
+                        if (showLogsSheet.value) {
+                            HazardLogSheet(
+                                events = eventsList,
+                                onDismiss = { showLogsSheet.value = false },
+                                onClearLogs = {
+                                    lifecycleScope.launch {
+                                        repository.clearLogs()
+                                        Toast.makeText(this@MainActivity, "Logs cleared", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            )
+                        }
                     }
                 }
             }
         }
 
         checkAndRequestPermissions()
+    }
+
+    private fun setupThermalMonitoring() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val powerManager = getSystemService(Context.POWER_SERVICE) as? PowerManager
+            powerManager?.addThermalStatusListener { status ->
+                val throttled = status >= PowerManager.THERMAL_STATUS_MODERATE
+                isThermalThrottled.value = throttled
+                if (::cameraManager.isInitialized) {
+                    cameraManager.setFrameInterval(if (throttled) 500L else 200L)
+                }
+            }
+        }
+    }
+
+    private fun calibratePosture() {
+        val currentTrunk = currentMetrics.value.trunkAngleDegrees
+        poseAnalyzer.calibrateBaseline(currentTrunk)
+        Toast.makeText(this, "Neutral posture calibrated (zeroed at ${currentTrunk.toInt()}°)", Toast.LENGTH_SHORT).show()
     }
 
     private fun checkAndRequestPermissions() {
@@ -206,7 +253,9 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             val csv = repository.exportToCsvString()
             val file = officeKitBridge.saveCsvForFileTransfer(csv)
-            Toast.makeText(this@MainActivity, "Saved CSV log to: ${file.name}", Toast.LENGTH_SHORT).show()
+            val shareIntent = officeKitBridge.createShareIntent(csv)
+            startActivity(Intent.createChooser(shareIntent, "Share Hazard CSV (Office Kit)"))
+            Toast.makeText(this@MainActivity, "Saved CSV to: ${file.name}", Toast.LENGTH_SHORT).show()
         }
     }
 

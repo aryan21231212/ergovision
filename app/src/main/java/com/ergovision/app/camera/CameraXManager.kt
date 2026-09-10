@@ -25,7 +25,12 @@ class CameraXManager(
 
     private val cameraExecutor: ExecutorService = Executors.newSingleThreadExecutor()
     private var lastProcessedFrameTimestampMs: Long = 0L
-    private val targetFrameIntervalMs = 200L // 5 FPS throttle interval
+    @Volatile
+    var targetFrameIntervalMs: Long = 200L // 5 FPS throttle interval (200ms)
+
+    fun setFrameInterval(intervalMs: Long) {
+        targetFrameIntervalMs = intervalMs
+    }
 
     fun startCamera(previewSurfaceProvider: Preview.SurfaceProvider? = null) {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(context)

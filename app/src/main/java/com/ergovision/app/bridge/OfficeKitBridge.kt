@@ -3,6 +3,8 @@ package com.ergovision.app.bridge
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
+import android.os.Environment
 import java.io.File
 
 /**
@@ -18,11 +20,20 @@ class OfficeKitBridge(private val context: Context) {
     }
 
     fun saveCsvForFileTransfer(csvContent: String): File {
-        val exportDir = File(context.filesDir, "exports")
+        val exportDir = context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)
+            ?: File(context.filesDir, "exports")
         if (!exportDir.exists()) exportDir.mkdirs()
 
         val file = File(exportDir, "ergovision_hazard_logs.csv")
         file.writeText(csvContent)
         return file
+    }
+
+    fun createShareIntent(csvContent: String): Intent {
+        return Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_SUBJECT, "ErgoVision Hazard Compliance Report")
+            putExtra(Intent.EXTRA_TEXT, csvContent)
+        }
     }
 }

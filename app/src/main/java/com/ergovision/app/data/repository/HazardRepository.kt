@@ -35,4 +35,8 @@ class HazardRepository(private val dao: HazardEventDao) {
         }
         sb.toString()
     }
+
+    suspend fun clearLogs() = withContext(Dispatchers.IO) {
+        dao.clearAll()
+    }
 }

@@ -51,4 +51,25 @@ class RebaPoseAnalyzerTest {
         assertTrue("Trunk flexion angle should exceed 60 degrees", metrics.trunkAngleDegrees > 60f)
         assertEquals(HazardType.TRUNK_FLEXION_SEVERE, metrics.detectedHazard)
     }
+
+    @Test
+    fun testCalibrationZerosOutCameraTiltAngle() {
+        val analyzer = RebaPoseAnalyzer()
+        val landmarks = MutableList(33) { Point3D(0f, 0f, 0f) }
+
+        // Upright with a 15-degree camera tilt
+        landmarks[RebaPoseAnalyzer.LEFT_HIP] = Point3D(-0.1f, 0f, 0f)
+        landmarks[RebaPoseAnalyzer.RIGHT_HIP] = Point3D(0.1f, 0f, 0f)
+        landmarks[RebaPoseAnalyzer.LEFT_SHOULDER] = Point3D(0.12f, -0.48f, 0f)
+        landmarks[RebaPoseAnalyzer.RIGHT_SHOULDER] = Point3D(0.12f, -0.48f, 0f)
+
+        val uncalibrated = analyzer.analyze(landmarks, 1000L)
+        assertTrue("Uncalibrated angle should be positive due to tilt", uncalibrated.trunkAngleDegrees > 10f)
+
+        // Calibrate baseline
+        analyzer.calibrateBaseline(uncalibrated.trunkAngleDegrees)
+
+        val calibrated = analyzer.analyze(landmarks, 1001L)
+        assertEquals(0f, calibrated.trunkAngleDegrees, 0.01f)
+    }
 }
