@@ -1,23 +1,31 @@
 package com.ergovision.app.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.Gavel
+import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.ergovision.app.ui.theme.BackgroundDark
-import com.ergovision.app.ui.theme.BrandCyan
-import com.ergovision.app.ui.theme.SurfaceDark
+import com.ergovision.app.ui.theme.*
 
+/**
+ * Executive EHS Compliance Audit Report Modal.
+ * Presents on-device synthesized ergonomic compliance memos adhering to the Factories Act 1948.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ComplianceReportDialog(
@@ -30,7 +38,7 @@ fun ComplianceReportDialog(
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = Color(0xFF0B1120),
+        containerColor = BackgroundDark,
         dragHandle = { BottomSheetDefaults.DragHandle(color = Color(0xFF475569)) }
     ) {
         Column(
@@ -48,15 +56,17 @@ fun ComplianceReportDialog(
             ) {
                 Column {
                     Text(
-                        text = "EHS Compliance Audit Report",
-                        color = Color.White,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
+                        text = "EHS COMPLIANCE AUDIT",
+                        color = TextPrimary,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.8.sp
                     )
                     Text(
                         text = "Synthesized via On-Device LiteRT-LM • $eventCount events analyzed",
                         color = BrandCyan,
-                        fontSize = 11.sp
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium
                     )
                 }
             }
@@ -64,18 +74,37 @@ fun ComplianceReportDialog(
             Spacer(modifier = Modifier.height(14.dp))
 
             // Statutory Reference Banner
-            Box(
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color(0xFF1E293B), RoundedCornerShape(8.dp))
-                    .padding(10.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(SurfaceSteel)
+                    .border(1.dp, BorderHairline, RoundedCornerShape(10.dp))
+                    .padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "⚖️ Statutory Standard: Factories Act 1948 (India), Sections 11–18\nMandatory ergonomics & repetitive physiological strain mitigation.",
-                    color = Color(0xFF94A3B8),
-                    fontSize = 11.sp,
-                    lineHeight = 16.sp
+                Icon(
+                    imageVector = Icons.Rounded.Gavel,
+                    contentDescription = "Statutory Law",
+                    tint = BrandCyan,
+                    modifier = Modifier.size(20.dp)
                 )
+                Spacer(modifier = Modifier.width(10.dp))
+                Column {
+                    Text(
+                        text = "FACTORIES ACT 1948 (INDIA) • SECTIONS 11–18",
+                        color = TextPrimary,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.5.sp
+                    )
+                    Text(
+                        text = "Mandatory industrial ergonomics & repetitive strain mitigation standard.",
+                        color = TextSecondary,
+                        fontSize = 11.sp,
+                        lineHeight = 15.sp
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -88,22 +117,33 @@ fun ComplianceReportDialog(
                         .height(180.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator(color = BrandCyan)
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator(color = BrandCyan, modifier = Modifier.size(32.dp), strokeWidth = 3.dp)
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = "Synthesizing EHS Audit on-device...",
+                            color = TextSecondary,
+                            fontSize = 12.sp,
+                            fontFamily = FontFamily.Monospace
+                        )
+                    }
                 }
             } else {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(max = 280.dp)
-                        .background(BackgroundDark, RoundedCornerShape(10.dp))
+                        .heightIn(max = 290.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(SurfaceSteel)
+                        .border(1.dp, BorderHairline, RoundedCornerShape(12.dp))
                         .padding(14.dp)
                         .verticalScroll(rememberScrollState())
                 ) {
                     Text(
                         text = reportText,
-                        color = Color(0xFFE2E8F0),
-                        fontSize = 13.sp,
-                        lineHeight = 20.sp,
+                        color = TextPrimary,
+                        fontSize = 12.sp,
+                        lineHeight = 19.sp,
                         fontFamily = FontFamily.Monospace
                     )
                 }
@@ -120,17 +160,32 @@ fun ComplianceReportDialog(
                     onClick = onCopyToClipboard,
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(containerColor = BrandCyan, contentColor = Color.Black),
-                    shape = RoundedCornerShape(8.dp)
+                    shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text("📋 Copy to Office Kit", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Icon(
+                        imageVector = Icons.Rounded.ContentCopy,
+                        contentDescription = "Copy to Office Kit",
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Copy to Office Kit", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
 
                 OutlinedButton(
                     onClick = onShareReport,
                     modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(8.dp)
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
+                    shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text("📤 Share Report", fontSize = 12.sp, color = Color.White)
+                    Icon(
+                        imageVector = Icons.Rounded.Share,
+                        contentDescription = "Share Report",
+                        tint = TextPrimary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Share Report", fontSize = 12.sp, color = TextPrimary)
                 }
             }
 

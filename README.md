@@ -84,39 +84,45 @@ flowchart TD
 
 ---
 
-## 📱 Responsive Glassmorphic UI
+## 📱 Cyber-Industrial Instrument UI (Anti-Slop Design System)
 
-The interface has been meticulously designed following a **minimalist, uncluttered industrial aesthetic** that automatically adapts across **all form factors** (compact phones, standard displays, foldables, and tablets) using Jetpack Compose `BoxWithConstraints`:
+The user interface was redesigned following **[Taste Skill](https://www.tasteskill.dev/)** and **[UI-UX Pro Max](https://ui-ux-pro-max-skill.com/)** guidelines, eliminating generic template patterns ("AI slop") and replacing emojis with a **Cyber-Industrial Biometrics Instrument** aesthetic (inspired by Leica, Teenage Engineering, DJI Enterprise, and Tesla shop-floor HUDs):
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│  [ ● SAFE   5 FPS ]               [ 📷   🔄   🎯   🔊   🌙 ]  │  <-- Frosted Top Capsule
+│  [ ● SAFE  5 FPS ]               [ [📷]  [🔄]  [🎯]  [🔊]  [🌙] ]  │  <-- Precision Steel Capsule
 ├──────────────────────────────────────────────────────────┤
-│    TRUNK 12°   │   NECK 8°   │   ARM 22°   │   REBA 1.0     │  <-- Biomechanical Telemetry
+│    TRUNK 12°   │   NECK 8°   │   ARM 22°   │   REBA 1.0     │  <-- Monospace Tabular Telemetry
 ├──────────────────────────────────────────────────────────┤
 │                                                          │
-│                     ● Neck (Safe)                        │
+│                     ◎ Head Reticle                       │
 │                    / \                                   │
-│            Arm ●──●───●──● Arm (Safe)                    │
-│                   │   │                                  │
-│         Trunk === │   │ === (Green/Yellow/Red Gradient)   │
-│                   ●───● Hips                             │
+│            Arm ◎──◎───◎──◎ Arm Reticle                   │
+│                   │ ║ │                                  │
+│         Spine ─── ║ ║ ║ ─── Central Ergonomic Axis       │
+│                   ◎───◎ Hips Reticle                     │
 │                                                          │
 ├──────────────────────────────────────────────────────────┤
-│       [ ✨ EHS Audit ]   [ 📋 Logs (14) ]   [ 📤 CSV ]   │  <-- Floating Bottom Dock
+│    [ ✦ EHS Audit ]   [ ◷ Logs [14] ]   [ ⤓ CSV ]   [ ⚡ ]   │  <-- Segmented Tactile Dock
 └──────────────────────────────────────────────────────────┘
 ```
 
-### Key UI Capabilities:
-1. **Adaptive Status Capsule**: Live glowing beacon (`● SAFE`, `● ANALYZING`, `● HAZARD ALERT`, `● COOLDOWN`) with real-time FPS/sensor indicator.
-2. **Segment-Level Risk Gradient Skeleton**: Individual skeleton bones dynamically shift colors in real time:
-   * **Trunk:** Safe (Green <20°), Warning (Yellow 20°–60°), Severe (Red >60°).
-   * **Neck:** Safe (Green <20°), Warning (Yellow >20°).
-   * **Arms:** Safe (Green <60°), Warning (Yellow 60°–90°), Severe (Red >90°).
-3. **Biomechanical Pocket Mode (`PocketModeView`)**: When activated, the camera feed shuts down completely to save power and privacy, revealing a **54° circular tilt dial** with 1-tap baseline calibration.
-4. **Interactive EHS Audit Dialog (`ComplianceReportDialog`)**: Modal preview allowing supervisors to review on-device GenAI legal audits before 1-tap copying to the Office Kit Shared Clipboard.
-5. **Front / Back Camera Toggle (`🔄`)**: Switch between workstation side-mount (back camera) and personal desk self-testing (front camera) instantly.
-6. **OLED Low-Power Screen Saver (`🌙`)**: True black OLED screen with a gentle pulsing beacon to monitor postures during 8-hour shifts with near-zero screen power consumption.
+### Key UI/UX Capabilities:
+1. **Zero Emoji Glyphs / 100% Scalable Vector Icons**: Replaced generic web emojis with high-contrast, scalable `Icons.Rounded.*` vector icons (`Videocam`, `Smartphone`, `FlipCameraAndroid`, `CenterFocusStrong`, `VolumeUp`, `AutoAwesome`, `History`, `FileDownload`, `Bolt`, `Shield`, `Gavel`).
+2. **Medical-Grade Biometric Skeleton Reticle (`SkeletonOverlay`)**:
+   * Dual-pass luminous bones: Outer luminous glow pass (`alpha = 0.28`) + crisp inner core bone vector (`3.5f`).
+   * Precision dual-halo joint reticles: Translucent black halo + high-contrast white ring + center target pip on every joint pivot.
+   * Central spinal alignment axis: Real-time dynamic vector between shoulder midpoint and hip midpoint.
+3. **Aircraft Attitude Inclinometer Dial (`PocketModeView`)**:
+   * True calibrated horizon dial: Real-time degree tick marks ($-90^\circ$ to $+90^\circ$ in $15^\circ$ increments).
+   * Dynamic attitude horizon line and live flexion arc with monospace tabular numerical readout.
+   * Tactile baseline zero calibration button.
+4. **Segmented High-Contrast Control Dock (`BottomControlDock`)**:
+   * Segmented industrial dock with high-contrast `BrandCyan` (`#38BDF8`) action pill, dark slate buttons with hairline borders (`Color(0x1AFFFFFF)`), and real-time numeric incident counter badge.
+5. **Executive EHS Compliance Audit Memo (`ComplianceReportDialog`)**:
+   * High-contrast legal memo layout citing Indian statutory standard **Factories Act 1948 (Sections 11–18)** with 1-tap copy to iQOO Office Kit Shared Clipboard.
+6. **OLED Low-Power Shift Saver (`🌙`)**:
+   * True black OLED screen (`#000000`) with gentle pulsing telemetry beacon, reducing screen power drain to near-zero over 8-hour factory shifts while keeping camera inference active.
 
 ---
 
@@ -162,19 +168,19 @@ cd ergovision
 ### 🎯 60-Second Hackathon Demonstration Sequence
 
 1. **Stationary Camera Setup:**
-   * Launch ErgoVision. Tap **"Calibrate" (`🎯`)** while standing upright to baseline the camera tilt angle.
+   * Launch ErgoVision. Tap the **Calibrate Reticle Button** (`CenterFocusStrong`) while standing upright to baseline camera tilt.
 2. **Trigger Sustained Hazard:**
    * Bend your torso forward (>60°). The top pill transitions from `SAFE (Green)` to `ANALYZING (Yellow)`.
-   * Hold the pose for **5 seconds**. An industrial **chime** sounds followed by:
+   * Hold the pose for **5 seconds**. An industrial **chime** sounds followed by instant voice correction:
      > *"Warning! Please straighten your back immediately."*
    * The status turns `HAZARD (Red)` and enters `COOLDOWN (15s)` to prevent alarm fatigue.
 3. **Inspect Local Incident Logs:**
-   * Tap **`📋 Logs`** on the bottom dock to inspect the recorded event, peak angle, duration, and on-device coaching tip.
+   * Tap **`Logs`** on the bottom dock to inspect the recorded events, peak angles, durations, and on-device coaching tips in the audit sheet.
 4. **Generate EHS Audit & Office Kit Sync:**
-   * Tap **`✨ EHS Audit`**. An interactive memo appears citing **Sections 11–18 of the Factories Act 1948**.
-   * Tap **"Copy to Office Kit"** — the text is now on your laptop's clipboard ready to paste!
+   * Tap **`EHS Audit`**. An interactive legal memo appears citing **Sections 11–18 of the Factories Act 1948**.
+   * Tap **"Copy to Office Kit"** — the text is immediately copied to your laptop via iQOO Shared Clipboard!
 5. **Demonstrate Pocket Wearable Mode:**
-   * Tap **`📱 Mount`** to switch to **Pocket Mode**. The camera turns off, displaying the real-time **54° circular tilt dial**.
+   * Tap the **Smartphone Toggle Button** to switch to **Pocket Mode**. The camera turns off, displaying the calibrated **Attitude Inclinometer Dial**.
    * Slip the phone into your shirt pocket or belt clip to demonstrate wearable ergonomics!
 
 ### Automated Jury Verification Script
