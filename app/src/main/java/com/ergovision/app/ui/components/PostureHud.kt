@@ -34,6 +34,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ergovision.app.data.model.HazardState
@@ -137,79 +138,83 @@ fun PostureHud(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Sleek Instrument Status Capsule (Fluid width with animateContentSize)
+                // Sleek Compact Instrument Status Capsule (Locked 32dp height, zero vertical stretching)
                 Row(
                     modifier = Modifier
-                        .weight(1f, fill = false)
-                        .clip(RoundedCornerShape(24.dp))
+                        .height(32.dp)
+                        .clip(RoundedCornerShape(16.dp))
                         .background(SurfaceSteel.copy(alpha = 0.90f))
-                        .border(1.dp, BorderSubtle, RoundedCornerShape(24.dp))
-                        .animateContentSize()
-                        .padding(horizontal = if (isCompact || isCooldown) 8.dp else horizontalPadding, vertical = 6.dp),
+                        .border(1.dp, BorderSubtle, RoundedCornerShape(16.dp))
+                        .padding(horizontal = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // Pulsing Status Dot
                     Box(contentAlignment = Alignment.Center) {
                         Box(
                             modifier = Modifier
-                                .size(13.dp)
+                                .size(10.dp)
                                 .clip(CircleShape)
                                 .background(statusColor.copy(alpha = 0.25f))
                         )
                         Box(
                             modifier = Modifier
-                                .size(7.dp)
+                                .size(6.dp)
                                 .clip(CircleShape)
                                 .background(statusColor)
                         )
                     }
 
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Spacer(modifier = Modifier.width(5.dp))
 
                     Text(
                         text = statusLabel,
                         color = TextPrimary,
-                        fontSize = if (isCompact || isCooldown) 11.sp else 12.sp,
+                        fontSize = if (isCompact || isCooldown) 10.sp else 11.sp,
                         fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.6.sp,
-                        maxLines = 1
+                        letterSpacing = 0.4.sp,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Ellipsis
                     )
 
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Spacer(modifier = Modifier.width(5.dp))
 
                     // Sensor Rate Badge
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
+                            .clip(RoundedCornerShape(4.dp))
                             .background(Color(0x22FFFFFF))
                             .padding(horizontal = 5.dp, vertical = 2.dp)
                     ) {
                         Text(
                             text = if (isThermalThrottled) "2 FPS" else if (isPocketMode) "IMU" else "5 FPS",
                             color = if (isThermalThrottled) HazardYellow else BrandCyan,
-                            fontSize = if (isCompact || isCooldown) 9.sp else 10.sp,
+                            fontSize = 9.sp,
                             fontFamily = FontFamily.Monospace,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            softWrap = false
                         )
                     }
                 }
 
                 Spacer(modifier = Modifier.width(6.dp))
 
-                // Vector Action Capsule with Dynamic Sliding Effect on Cooldown
+                // Swipeable Vector Action Capsule (Locked 32dp height, smoothly swipeable & auto-sliding on cooldown)
                 Row(
                     modifier = Modifier
+                        .height(32.dp)
                         .offset(x = cooldownSlideOffset)
                         .weight(1f, fill = false)
-                        .clip(RoundedCornerShape(24.dp))
+                        .clip(RoundedCornerShape(16.dp))
                         .background(SurfaceSteel.copy(alpha = 0.92f))
                         .border(
                             1.dp,
                             if (isCooldown) BrandCyan.copy(alpha = 0.55f) else BorderSubtle,
-                            RoundedCornerShape(24.dp)
+                            RoundedCornerShape(16.dp)
                         )
                         .horizontalScroll(actionScrollState)
-                        .padding(horizontal = 3.dp, vertical = 3.dp),
+                        .padding(horizontal = 3.dp),
                     horizontalArrangement = Arrangement.spacedBy(1.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -250,7 +255,7 @@ fun PostureHud(
                         onClick = onToggleAudioClick
                     )
 
-                    // OLED Low Power Dimmer (Never cut off; slides into view)
+                    // OLED Low Power Dimmer (Accessible via swipe / auto-slide on cooldown)
                     HudIconButton(
                         imageVector = Icons.Rounded.DarkMode,
                         contentDescription = "OLED Low-Power Mode",
@@ -317,8 +322,8 @@ private fun HudIconButton(
     tint: Color = TextPrimary,
     onClick: () -> Unit
 ) {
-    val buttonSize = if (isCompact) 28.dp else 32.dp
-    val iconSize = if (isCompact) 15.dp else 16.dp
+    val buttonSize = if (isCompact) 26.dp else 28.dp
+    val iconSize = if (isCompact) 14.dp else 15.dp
     Box(
         modifier = Modifier
             .size(buttonSize)
