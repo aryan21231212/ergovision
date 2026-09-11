@@ -1,12 +1,19 @@
 package com.ergovision.app.ui.components
 
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CenterFocusStrong
 import androidx.compose.material.icons.rounded.DarkMode
@@ -100,25 +107,53 @@ fun PostureHud(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Top Bar: Status Telemetry Pill (Left) & Control Icons Capsule (Right)
+            val isCooldown = state == HazardState.COOLDOWN
+            val actionScrollState = rememberScrollState()
+
+            // Smoothly slide to reveal dark mode and other actions when cooldown state triggers
+            LaunchedEffect(isCooldown) {
+                if (isCooldown) {
+                    actionScrollState.animateScrollTo(
+                        value = actionScrollState.maxValue,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessLow
+                        )
+                    )
+                }
+            }
+
+            // Tactile sliding offset on the right bar
+            val cooldownSlideOffset by animateDpAsState(
+                targetValue = if (isCooldown) (-8).dp else 0.dp,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessMediumLow
+                ),
+                label = "cooldownSlide"
+            )
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Sleek Instrument Status Capsule
+                // Sleek Instrument Status Capsule (Fluid width with animateContentSize)
                 Row(
                     modifier = Modifier
+                        .weight(1f, fill = false)
                         .clip(RoundedCornerShape(24.dp))
                         .background(SurfaceSteel.copy(alpha = 0.90f))
                         .border(1.dp, BorderSubtle, RoundedCornerShape(24.dp))
-                        .padding(horizontal = horizontalPadding, vertical = 6.dp),
+                        .animateContentSize()
+                        .padding(horizontal = if (isCompact || isCooldown) 8.dp else horizontalPadding, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // Pulsing Status Dot
                     Box(contentAlignment = Alignment.Center) {
                         Box(
                             modifier = Modifier
-                                .size(14.dp)
+                                .size(13.dp)
                                 .clip(CircleShape)
                                 .background(statusColor.copy(alpha = 0.25f))
                         )
@@ -130,50 +165,60 @@ fun PostureHud(
                         )
                     }
 
-                    Spacer(modifier = Modifier.width(7.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
 
                     Text(
                         text = statusLabel,
                         color = TextPrimary,
-                        fontSize = if (isCompact) 11.sp else 12.sp,
+                        fontSize = if (isCompact || isCooldown) 11.sp else 12.sp,
                         fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.8.sp
+                        letterSpacing = 0.6.sp,
+                        maxLines = 1
                     )
 
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
 
                     // Sensor Rate Badge
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
                             .background(Color(0x22FFFFFF))
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                            .padding(horizontal = 5.dp, vertical = 2.dp)
                     ) {
                         Text(
                             text = if (isThermalThrottled) "2 FPS" else if (isPocketMode) "IMU" else "5 FPS",
                             color = if (isThermalThrottled) HazardYellow else BrandCyan,
-                            fontSize = if (isCompact) 9.sp else 10.sp,
+                            fontSize = if (isCompact || isCooldown) 9.sp else 10.sp,
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Bold
                         )
                     }
                 }
 
-                // Vector Action Capsule
+                Spacer(modifier = Modifier.width(6.dp))
+
+                // Vector Action Capsule with Dynamic Sliding Effect on Cooldown
                 Row(
                     modifier = Modifier
+                        .offset(x = cooldownSlideOffset)
+                        .weight(1f, fill = false)
                         .clip(RoundedCornerShape(24.dp))
-                        .background(SurfaceSteel.copy(alpha = 0.90f))
-                        .border(1.dp, BorderSubtle, RoundedCornerShape(24.dp))
-                        .padding(horizontal = 4.dp, vertical = 3.dp),
-                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                        .background(SurfaceSteel.copy(alpha = 0.92f))
+                        .border(
+                            1.dp,
+                            if (isCooldown) BrandCyan.copy(alpha = 0.55f) else BorderSubtle,
+                            RoundedCornerShape(24.dp)
+                        )
+                        .horizontalScroll(actionScrollState)
+                        .padding(horizontal = 3.dp, vertical = 3.dp),
+                    horizontalArrangement = Arrangement.spacedBy(1.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // Sensor Mode Toggle (Camera vs Pocket IMU)
                     HudIconButton(
                         imageVector = if (isPocketMode) Icons.Rounded.Smartphone else Icons.Rounded.Videocam,
                         contentDescription = if (isPocketMode) "Switch to Camera" else "Switch to Pocket IMU",
-                        isCompact = isCompact,
+                        isCompact = isCompact || isCooldown,
                         isActive = isPocketMode,
                         onClick = onToggleModeClick
                     )
@@ -183,7 +228,7 @@ fun PostureHud(
                         HudIconButton(
                             imageVector = Icons.Rounded.FlipCameraAndroid,
                             contentDescription = "Flip Camera",
-                            isCompact = isCompact,
+                            isCompact = isCompact || isCooldown,
                             isActive = isFrontCamera,
                             onClick = onToggleCameraClick
                         )
@@ -193,7 +238,7 @@ fun PostureHud(
                     HudIconButton(
                         imageVector = Icons.Rounded.CenterFocusStrong,
                         contentDescription = "Calibrate Neutral Posture",
-                        isCompact = isCompact,
+                        isCompact = isCompact || isCooldown,
                         onClick = onCalibrateClick
                     )
 
@@ -201,16 +246,16 @@ fun PostureHud(
                     HudIconButton(
                         imageVector = if (isAudioMuted) Icons.Rounded.VolumeOff else Icons.Rounded.VolumeUp,
                         contentDescription = if (isAudioMuted) "Unmute Audio" else "Mute Audio",
-                        isCompact = isCompact,
+                        isCompact = isCompact || isCooldown,
                         tint = if (isAudioMuted) TextTertiary else TextPrimary,
                         onClick = onToggleAudioClick
                     )
 
-                    // OLED Low Power Dimmer
+                    // OLED Low Power Dimmer (Never cut off; slides into view)
                     HudIconButton(
                         imageVector = Icons.Rounded.DarkMode,
                         contentDescription = "OLED Low-Power Mode",
-                        isCompact = isCompact,
+                        isCompact = isCompact || isCooldown,
                         onClick = onDimScreenClick
                     )
                 }
@@ -273,8 +318,8 @@ private fun HudIconButton(
     tint: Color = TextPrimary,
     onClick: () -> Unit
 ) {
-    val buttonSize = if (isCompact) 30.dp else 34.dp
-    val iconSize = if (isCompact) 16.dp else 18.dp
+    val buttonSize = if (isCompact) 28.dp else 32.dp
+    val iconSize = if (isCompact) 15.dp else 16.dp
     Box(
         modifier = Modifier
             .size(buttonSize)

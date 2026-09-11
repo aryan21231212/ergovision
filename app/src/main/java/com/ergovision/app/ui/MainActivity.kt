@@ -269,6 +269,7 @@ class MainActivity : ComponentActivity() {
                             ComplianceReportDialog(
                                 reportText = generatedReportText.value,
                                 eventCount = eventsList.size,
+                                events = eventsList,
                                 isLoading = isGeneratingReport.value,
                                 onDismiss = { showReportDialog.value = false },
                                 onCopyToClipboard = {
