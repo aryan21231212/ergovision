@@ -41,8 +41,10 @@ import com.ergovision.app.pose.MediaPipePoseEstimator
 import com.ergovision.app.sensor.ImuPostureTracker
 import com.ergovision.app.service.CameraForegroundService
 import com.ergovision.app.tts.TtsAlertManager
+import com.ergovision.app.ui.components.BottomControlDock
 import com.ergovision.app.ui.components.ComplianceReportDialog
 import com.ergovision.app.ui.components.HazardLogSheet
+import com.ergovision.app.ui.components.PocketModeView
 import com.ergovision.app.ui.components.PostureHud
 import com.ergovision.app.ui.components.SkeletonOverlay
 import com.ergovision.app.ui.theme.ErgoVisionTheme
@@ -139,10 +141,12 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     Box(modifier = Modifier.fillMaxSize()) {
-                        // Camera Preview Surface
+                        // Camera Preview Surface (Responsive full-fill without distortion)
                         AndroidView(
                             factory = { ctx ->
                                 PreviewView(ctx).also { previewView ->
+                                    previewView.scaleType = PreviewView.ScaleType.FILL_CENTER
+                                    previewView.implementationMode = PreviewView.ImplementationMode.PERFORMANCE
                                     cameraManager = CameraXManager(
                                         context = this@MainActivity,
                                         lifecycleOwner = this@MainActivity,
@@ -158,40 +162,22 @@ class MainActivity : ComponentActivity() {
                             modifier = Modifier.fillMaxSize()
                         )
 
-                        // Live Skeleton Pose Overlay (shown only in camera mount mode)
+                        // Mode-specific display: AR Skeleton vs Pocket Sensor Dial
                         if (!isPocketMode.value) {
                             SkeletonOverlay(
                                 landmarks = currentScreenLandmarks.value,
                                 metrics = currentMetrics.value
                             )
                         } else {
-                            // Pocket mode indicator banner
-                            Box(
-                                modifier = Modifier
-                                    .align(Alignment.Center)
-                                    .background(Color(0xCC1E1B4B), androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
-                                    .padding(20.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text(
-                                        text = "📱 Pocket IMU Mode Active",
-                                        color = Color.White,
-                                        fontSize = 16.sp,
-                                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
-                                    )
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        text = "Clip device to chest pocket or belt.\nCamera sensor suspended to preserve power.",
-                                        color = Color(0xFFA5B4FC),
-                                        fontSize = 12.sp,
-                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                                    )
-                                }
-                            }
+                            PocketModeView(
+                                metrics = currentMetrics.value,
+                                state = currentState.value,
+                                onCalibrateClick = { calibratePosture() },
+                                modifier = Modifier.fillMaxSize()
+                            )
                         }
 
-                        // Top Ergonomic HUD with Mode, Calibrate, and Logs controls
+                        // Responsive Top Industrial Posture HUD
                         PostureHud(
                             metrics = currentMetrics.value,
                             state = currentState.value,
@@ -199,9 +185,7 @@ class MainActivity : ComponentActivity() {
                             isPocketMode = isPocketMode.value,
                             isAudioMuted = isAudioMuted.value,
                             isFrontCamera = isFrontCamera.value,
-                            eventCount = eventsList.size,
                             onCalibrateClick = { calibratePosture() },
-                            onLogsClick = { showLogsSheet.value = true },
                             onDimScreenClick = { isDimmedMode.value = true },
                             onToggleModeClick = { togglePostureMode() },
                             onToggleAudioClick = { isAudioMuted.value = !isAudioMuted.value },
@@ -211,31 +195,25 @@ class MainActivity : ComponentActivity() {
                                     Toast.makeText(this@MainActivity, if (isFrontCamera.value) "Front Camera (Self-Test)" else "Back Camera (Mount)", Toast.LENGTH_SHORT).show()
                                 }
                             },
-                            modifier = Modifier.align(Alignment.TopCenter)
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .widthIn(max = 600.dp)
                         )
 
-                        // Bottom Office Kit Action Bar
-                        Row(
-                            modifier = Modifier
-                                .align(Alignment.BottomCenter)
-                                .fillMaxWidth()
-                                .background(Color(0xDD0F172A))
-                                .padding(12.dp),
-                            horizontalArrangement = Arrangement.SpaceEvenly
-                        ) {
-                            Button(onClick = { exportWeeklySummary() }) {
-                                Text("Sync Summary", fontSize = 12.sp)
-                            }
-                            Button(onClick = { exportCsvLogs() }) {
-                                Text("Export CSV", fontSize = 12.sp)
-                            }
-                            OutlinedButton(onClick = {
+                        // Responsive Floating Glassmorphic Bottom Control Dock
+                        BottomControlDock(
+                            eventCount = eventsList.size,
+                            onEhsAuditClick = { exportWeeklySummary() },
+                            onLogsClick = { showLogsSheet.value = true },
+                            onExportCsvClick = { exportCsvLogs() },
+                            onSimulateHazardClick = {
                                 onHazardConfirmed(HazardType.TRUNK_FLEXION_SEVERE, 65f, 5.0f)
                                 Toast.makeText(this@MainActivity, "Simulated Hazard Alert", Toast.LENGTH_SHORT).show()
-                            }) {
-                                Text("Simulate", fontSize = 12.sp, color = Color.White)
-                            }
-                        }
+                            },
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .widthIn(max = 600.dp)
+                        )
 
                         // OLED Low-Power / Privacy Dimmed Overlay
                         if (isDimmedMode.value) {

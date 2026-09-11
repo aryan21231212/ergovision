@@ -1,6 +1,7 @@
 package com.ergovision.app.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -9,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
@@ -30,12 +32,14 @@ fun HazardLogSheet(
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = SurfaceDark,
-        dragHandle = { BottomSheetDefaults.DragHandle(color = Color.Gray) }
+        containerColor = Color(0xFF0B1120),
+        dragHandle = { BottomSheetDefaults.DragHandle(color = Color(0xFF475569)) }
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .widthIn(max = 600.dp)
+                .align(Alignment.CenterHorizontally)
                 .padding(horizontal = 20.dp, vertical = 8.dp)
         ) {
             // Header
@@ -52,15 +56,15 @@ fun HazardLogSheet(
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "${events.size} total events captured",
-                        color = Color.LightGray,
+                        text = "${events.size} ergonomic events recorded on-device",
+                        color = Color(0xFF94A3B8),
                         fontSize = 12.sp
                     )
                 }
 
                 if (events.isNotEmpty()) {
                     TextButton(onClick = onClearLogs) {
-                        Text("Clear All", color = HazardRed, fontSize = 13.sp)
+                        Text("Clear All", color = HazardRed, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -74,13 +78,17 @@ fun HazardLogSheet(
                         .height(180.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = "No hazards detected yet.\nWorker posture compliance is optimal.",
-                        color = Color.Gray,
-                        fontSize = 14.sp,
-                        lineHeight = 20.sp,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                    )
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(text = "🛡️", fontSize = 32.sp)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Zero hazards detected.\nWorker posture compliance is optimal.",
+                            color = Color(0xFF64748B),
+                            fontSize = 13.sp,
+                            lineHeight = 18.sp,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                    }
                 }
             } else {
                 val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
@@ -98,7 +106,9 @@ fun HazardLogSheet(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(BackgroundDark, RoundedCornerShape(10.dp))
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color(0xFF131C31))
+                                .border(1.dp, Color(0x15FFFFFF), RoundedCornerShape(12.dp))
                                 .padding(12.dp)
                         ) {
                             Row(
@@ -109,21 +119,21 @@ fun HazardLogSheet(
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
                                         text = timeStr,
-                                        color = Color.LightGray,
-                                        fontSize = 12.sp,
+                                        color = Color(0xFF94A3B8),
+                                        fontSize = 11.sp,
                                         fontFamily = FontFamily.Monospace
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Box(
                                         modifier = Modifier
+                                            .clip(RoundedCornerShape(6.dp))
                                             .background(
-                                                if (isSevere) HazardRed.copy(alpha = 0.2f) else HazardYellow.copy(alpha = 0.2f),
-                                                RoundedCornerShape(4.dp)
+                                                if (isSevere) HazardRed.copy(alpha = 0.2f) else HazardYellow.copy(alpha = 0.2f)
                                             )
-                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                            .padding(horizontal = 7.dp, vertical = 2.dp)
                                     ) {
                                         Text(
-                                            text = event.hazardType.name,
+                                            text = event.hazardType.name.replace("_", " "),
                                             color = if (isSevere) HazardRed else HazardYellow,
                                             fontSize = 10.sp,
                                             fontWeight = FontWeight.Bold
@@ -132,20 +142,22 @@ fun HazardLogSheet(
                                 }
 
                                 Text(
-                                    text = "${event.durationSeconds.toInt()}s | ${event.peakAngleDegrees.toInt()}°",
+                                    text = "${event.durationSeconds.toInt()}s • ${event.peakAngleDegrees.toInt()}°",
                                     color = Color.White,
                                     fontSize = 12.sp,
-                                    fontWeight = FontWeight.SemiBold
+                                    fontFamily = FontFamily.Monospace,
+                                    fontWeight = FontWeight.Bold
                                 )
                             }
 
                             if (!event.coachingAdvice.isNullOrBlank()) {
-                                Spacer(modifier = Modifier.height(6.dp))
+                                Spacer(modifier = Modifier.height(8.dp))
                                 Text(
                                     text = "“${event.coachingAdvice}”",
                                     color = BrandCyan,
                                     fontSize = 12.sp,
-                                    fontStyle = FontStyle.Italic
+                                    fontStyle = FontStyle.Italic,
+                                    lineHeight = 16.sp
                                 )
                             }
                         }

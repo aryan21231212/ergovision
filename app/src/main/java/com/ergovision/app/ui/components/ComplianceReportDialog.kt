@@ -30,12 +30,14 @@ fun ComplianceReportDialog(
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = SurfaceDark,
-        dragHandle = { BottomSheetDefaults.DragHandle(color = Color.Gray) }
+        containerColor = Color(0xFF0B1120),
+        dragHandle = { BottomSheetDefaults.DragHandle(color = Color(0xFF475569)) }
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .widthIn(max = 600.dp)
+                .align(Alignment.CenterHorizontally)
                 .padding(horizontal = 20.dp, vertical = 8.dp)
         ) {
             // Header

@@ -2,26 +2,34 @@ package com.ergovision.app.ui.components
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ergovision.app.data.model.HazardState
 import com.ergovision.app.data.model.Point2D
 import com.ergovision.app.data.model.PostureMetrics
-import com.ergovision.app.ui.theme.BrandCyan
 import com.ergovision.app.ui.theme.HazardGreen
 import com.ergovision.app.ui.theme.HazardRed
 import com.ergovision.app.ui.theme.HazardYellow
 
+/**
+ * Fully responsive, clean industrial HUD overlay for ErgoVision.
+ * Adapts dynamically across compact phones, standard displays, and foldables/tablets.
+ */
 @Composable
 fun PostureHud(
     metrics: PostureMetrics,
@@ -30,199 +38,248 @@ fun PostureHud(
     isPocketMode: Boolean = false,
     isAudioMuted: Boolean = false,
     isFrontCamera: Boolean = false,
-    eventCount: Int = 0,
     onCalibrateClick: () -> Unit = {},
-    onLogsClick: () -> Unit = {},
     onDimScreenClick: () -> Unit = {},
     onToggleModeClick: () -> Unit = {},
     onToggleAudioClick: () -> Unit = {},
     onToggleCameraClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val stateColor = when (state) {
-        HazardState.SAFE -> HazardGreen
-        HazardState.EVALUATING -> HazardYellow
-        HazardState.TRIGGERED -> HazardRed
-        HazardState.COOLDOWN -> Color.Gray
-    }
-
-    Column(
+    BoxWithConstraints(
         modifier = modifier
             .fillMaxWidth()
-            .padding(16.dp)
+            .statusBarsPadding()
+            .padding(horizontal = 12.dp, vertical = 8.dp)
     ) {
-        // Status Banner
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(stateColor.copy(alpha = 0.88f), RoundedCornerShape(8.dp))
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column {
-                Text(
-                    text = "STATUS: ${state.name}",
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp
-                )
-                if (metrics.detectedHazard != null) {
-                    Text(
-                        text = metrics.detectedHazard.name,
-                        color = Color.White,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 11.sp
-                    )
-                }
-            }
+        val isCompact = maxWidth < 370.dp
+        val horizontalPadding = if (isCompact) 8.dp else 14.dp
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                // Thermal / FPS Indicator
-                Box(
-                    modifier = Modifier
-                        .background(
-                            if (isThermalThrottled) HazardYellow.copy(alpha = 0.3f) else Color.Black.copy(alpha = 0.25f),
-                            RoundedCornerShape(4.dp)
-                        )
-                        .padding(horizontal = 6.dp, vertical = 3.dp)
-                ) {
-                    Text(
-                        text = if (isThermalThrottled) "⚡ 2 FPS" else if (isPocketMode) "📱 IMU" else "📷 5 FPS",
-                        color = if (isThermalThrottled) HazardYellow else Color.White,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(5.dp))
-
-                // Mode Toggle Button (Camera Mount vs Pocket/IMU)
-                Box(
-                    modifier = Modifier
-                        .background(if (isPocketMode) Color(0xFF6366F1) else Color(0xFF334155), RoundedCornerShape(4.dp))
-                        .clickable { onToggleModeClick() }
-                        .padding(horizontal = 6.dp, vertical = 4.dp)
-                ) {
-                    Text(
-                        text = if (isPocketMode) "Pocket" else "Mount",
-                        color = Color.White,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-
-                if (!isPocketMode) {
-                    Spacer(modifier = Modifier.width(5.dp))
-
-                    // Camera Flip (Front vs Back)
-                    Box(
-                        modifier = Modifier
-                            .background(Color(0xFF1E293B), RoundedCornerShape(4.dp))
-                            .clickable { onToggleCameraClick() }
-                            .padding(horizontal = 6.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            text = if (isFrontCamera) "Front" else "Back",
-                            color = Color.White,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.width(5.dp))
-
-                // Calibrate Button
-                Box(
-                    modifier = Modifier
-                        .background(Color.Black.copy(alpha = 0.35f), RoundedCornerShape(4.dp))
-                        .clickable { onCalibrateClick() }
-                        .padding(horizontal = 7.dp, vertical = 4.dp)
-                ) {
-                    Text(
-                        text = "Calib",
-                        color = Color.White,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(5.dp))
-
-                // Logs Counter Button
-                Box(
-                    modifier = Modifier
-                        .background(BrandCyan.copy(alpha = 0.9f), RoundedCornerShape(4.dp))
-                        .clickable { onLogsClick() }
-                        .padding(horizontal = 7.dp, vertical = 4.dp)
-                ) {
-                    Text(
-                        text = "Logs ($eventCount)",
-                        color = Color.Black,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(5.dp))
-
-                // Audio Mute/Unmute Button
-                Box(
-                    modifier = Modifier
-                        .background(Color.DarkGray.copy(alpha = 0.6f), RoundedCornerShape(4.dp))
-                        .clickable { onToggleAudioClick() }
-                        .padding(horizontal = 6.dp, vertical = 4.dp)
-                ) {
-                    Text(
-                        text = if (isAudioMuted) "🔇" else "🔊",
-                        fontSize = 11.sp
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(5.dp))
-
-                // Dim Button (OLED Battery Saver)
-                Box(
-                    modifier = Modifier
-                        .background(Color.DarkGray.copy(alpha = 0.6f), RoundedCornerShape(4.dp))
-                        .clickable { onDimScreenClick() }
-                        .padding(horizontal = 6.dp, vertical = 4.dp)
-                ) {
-                    Text(
-                        text = "Dim",
-                        color = Color.White,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-            }
+        val (rawStatusLabel, statusColor) = when (state) {
+            HazardState.SAFE -> "SAFE" to HazardGreen
+            HazardState.EVALUATING -> "ANALYZING" to HazardYellow
+            HazardState.TRIGGERED -> (metrics.detectedHazard?.name?.replace("_", " ") ?: "HAZARD") to HazardRed
+            HazardState.COOLDOWN -> "COOLDOWN" to Color(0xFF94A3B8)
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
+        val statusLabel = if (isCompact && rawStatusLabel.length > 10) {
+            when {
+                rawStatusLabel.contains("TRUNK") -> "TRUNK HAZARD"
+                rawStatusLabel.contains("NECK") -> "NECK HAZARD"
+                rawStatusLabel.contains("ARM") -> "ARM REACH"
+                else -> "HAZARD"
+            }
+        } else {
+            rawStatusLabel
+        }
 
-        // Angular Metrics Card
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color(0xBB1E293B), RoundedCornerShape(8.dp))
-                .padding(12.dp),
-            horizontalArrangement = Arrangement.SpaceAround
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            MetricItem("TRUNK", "${metrics.trunkAngleDegrees.toInt()}°")
-            MetricItem("NECK", "${metrics.neckAngleDegrees.toInt()}°")
-            MetricItem("ARM", "${metrics.shoulderAngleDegrees.toInt()}°")
-            MetricItem("SCORE", String.format("%.1f", metrics.rawHazardScore))
+            // Top Bar: Status Pill (Left) & Control Icons Capsule (Right)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Sleek Status Capsule
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(Color(0xD90F172A))
+                        .border(1.dp, Color(0x30FFFFFF), RoundedCornerShape(24.dp))
+                        .padding(horizontal = horizontalPadding, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Status dot
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .clip(CircleShape)
+                            .background(statusColor)
+                    )
+
+                    Spacer(modifier = Modifier.width(6.dp))
+
+                    Text(
+                        text = statusLabel,
+                        color = Color.White,
+                        fontSize = if (isCompact) 11.sp else 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.5.sp
+                    )
+
+                    Spacer(modifier = Modifier.width(6.dp))
+
+                    // Subtle Sensor / FPS Indicator
+                    Text(
+                        text = if (isThermalThrottled) "2 FPS" else if (isPocketMode) "IMU" else "5 FPS",
+                        color = if (isThermalThrottled) HazardYellow else Color(0xFF94A3B8),
+                        fontSize = if (isCompact) 9.sp else 10.sp,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
+                // Minimalist Action Capsule
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(Color(0xD90F172A))
+                        .border(1.dp, Color(0x30FFFFFF), RoundedCornerShape(24.dp))
+                        .padding(horizontal = 3.dp, vertical = 3.dp),
+                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Mode Toggle
+                    HudIconButton(
+                        icon = if (isPocketMode) "📱" else "📷",
+                        isCompact = isCompact,
+                        isActive = isPocketMode,
+                        onClick = onToggleModeClick
+                    )
+
+                    // Camera Flip (Front vs Back)
+                    if (!isPocketMode) {
+                        HudIconButton(
+                            icon = "🔄",
+                            isCompact = isCompact,
+                            onClick = onToggleCameraClick
+                        )
+                    }
+
+                    // Calibrate Neutral Posture
+                    HudIconButton(
+                        icon = "🎯",
+                        isCompact = isCompact,
+                        onClick = onCalibrateClick
+                    )
+
+                    // Audio Mute/Unmute
+                    HudIconButton(
+                        icon = if (isAudioMuted) "🔇" else "🔊",
+                        isCompact = isCompact,
+                        onClick = onToggleAudioClick
+                    )
+
+                    // OLED Low Power Dimmer
+                    HudIconButton(
+                        icon = "🌙",
+                        isCompact = isCompact,
+                        onClick = onDimScreenClick
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Floating Telemetry Glass Bar
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color(0xD90F172A))
+                    .border(1.dp, Color(0x25FFFFFF), RoundedCornerShape(16.dp))
+                    .padding(vertical = 7.dp, horizontal = 8.dp),
+                horizontalArrangement = Arrangement.SpaceAround,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                val trunkColor = when {
+                    metrics.trunkAngleDegrees > 60f -> HazardRed
+                    metrics.trunkAngleDegrees > 20f -> HazardYellow
+                    else -> HazardGreen
+                }
+
+                val neckColor = when {
+                    metrics.neckAngleDegrees > 20f -> HazardYellow
+                    else -> HazardGreen
+                }
+
+                val armColor = when {
+                    metrics.shoulderAngleDegrees > 90f -> HazardRed
+                    metrics.shoulderAngleDegrees > 60f -> HazardYellow
+                    else -> HazardGreen
+                }
+
+                val scoreColor = when {
+                    metrics.rawHazardScore >= 2.0f -> HazardRed
+                    metrics.rawHazardScore >= 1.2f -> HazardYellow
+                    else -> HazardGreen
+                }
+
+                TelemetryItem("TRUNK", "${metrics.trunkAngleDegrees.toInt()}°", trunkColor, isCompact)
+                Box(modifier = Modifier.width(1.dp).height(18.dp).background(Color(0x25FFFFFF)))
+                TelemetryItem("NECK", "${metrics.neckAngleDegrees.toInt()}°", neckColor, isCompact)
+                Box(modifier = Modifier.width(1.dp).height(18.dp).background(Color(0x25FFFFFF)))
+                TelemetryItem("ARM", "${metrics.shoulderAngleDegrees.toInt()}°", armColor, isCompact)
+                Box(modifier = Modifier.width(1.dp).height(18.dp).background(Color(0x25FFFFFF)))
+                TelemetryItem("REBA", String.format("%.1f", metrics.rawHazardScore), scoreColor, isCompact)
+            }
         }
     }
 }
 
+@Composable
+private fun HudIconButton(
+    icon: String,
+    isCompact: Boolean,
+    isActive: Boolean = false,
+    onClick: () -> Unit
+) {
+    val buttonSize = if (isCompact) 30.dp else 34.dp
+    Box(
+        modifier = Modifier
+            .size(buttonSize)
+            .clip(CircleShape)
+            .background(if (isActive) Color(0xFF4F46E5) else Color.Transparent)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(text = icon, fontSize = if (isCompact) 12.sp else 14.sp)
+    }
+}
+
+@Composable
+private fun TelemetryItem(
+    label: String,
+    value: String,
+    statusColor: Color,
+    isCompact: Boolean
+) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(if (isCompact) 4.dp else 5.dp)
+                    .clip(CircleShape)
+                    .background(statusColor)
+            )
+            Spacer(modifier = Modifier.width(3.dp))
+            Text(
+                text = label,
+                color = Color(0xFF94A3B8),
+                fontSize = if (isCompact) 9.sp else 10.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 0.5.sp
+            )
+        }
+        Spacer(modifier = Modifier.height(1.dp))
+        Text(
+            text = value,
+            color = Color.White,
+            fontSize = if (isCompact) 13.sp else 15.sp,
+            fontWeight = FontWeight.Bold,
+            fontFamily = FontFamily.Monospace
+        )
+    }
+}
+
 /**
- * Segment-Level Ergonomic Skeleton Canvas.
- * Colors individual body segments dynamically based on per-joint risk:
+ * High-precision Segment-Level Ergonomic Skeleton Canvas.
+ * Draws subtle anti-aliased bones with dynamic per-joint risk coloring:
  * - Trunk: Red (>60°), Yellow (>20°), Green (neutral)
  * - Neck: Yellow (>20°), Green (neutral)
- * - Arms: Red (>90°), Green (neutral)
+ * - Arms: Red (>90°), Yellow (>60°), Green (neutral)
  */
 @Composable
 fun SkeletonOverlay(
@@ -245,6 +302,7 @@ fun SkeletonOverlay(
 
     val armColor = when {
         metrics.shoulderAngleDegrees > 90f -> HazardRed
+        metrics.shoulderAngleDegrees > 60f -> HazardYellow
         else -> HazardGreen
     }
 
@@ -258,16 +316,26 @@ fun SkeletonOverlay(
 
         fun drawBone(i1: Int, i2: Int, color: Color) {
             if (i1 < landmarks.size && i2 < landmarks.size) {
+                // Semi-transparent halo for smooth, anti-aliased visual presentation
+                drawLine(
+                    color = color.copy(alpha = 0.35f),
+                    start = pt(i1),
+                    end = pt(i2),
+                    strokeWidth = 9f,
+                    cap = StrokeCap.Round
+                )
+                // Crisp inner bone line
                 drawLine(
                     color = color,
                     start = pt(i1),
                     end = pt(i2),
-                    strokeWidth = 7f
+                    strokeWidth = 5f,
+                    cap = StrokeCap.Round
                 )
             }
         }
 
-        // Draw segmented bones with individual joint risk colors
+        // Draw segmented bones
         drawBone(11, 12, neutralColor) // Shoulders
         drawBone(11, 23, trunkColor)   // Left torso
         drawBone(12, 24, trunkColor)   // Right torso
@@ -279,24 +347,24 @@ fun SkeletonOverlay(
         drawBone(11, 7, neckColor)     // Left neck
         drawBone(12, 8, neckColor)     // Right neck
 
-        // Draw joint points
+        // Draw precise joint nodes with dual-ring halo
         val joints = listOf(11, 12, 13, 14, 15, 16, 23, 24, 7, 8)
         for (idx in joints) {
             if (idx < landmarks.size) {
+                val center = pt(idx)
+                // Outer halo
+                drawCircle(
+                    color = Color.Black.copy(alpha = 0.5f),
+                    radius = 7f,
+                    center = center
+                )
+                // Inner bright point
                 drawCircle(
                     color = Color.White,
-                    radius = 7f,
-                    center = pt(idx)
+                    radius = 4f,
+                    center = center
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun MetricItem(label: String, value: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(text = label, color = Color.LightGray, fontSize = 11.sp)
-        Text(text = value, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
     }
 }
