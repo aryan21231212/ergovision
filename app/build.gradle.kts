@@ -85,6 +85,9 @@ dependencies {
     // MediaPipe Tasks Vision (PoseLandmarker)
     implementation("com.google.mediapipe:tasks-vision:0.10.14")
 
+    // MediaPipe Tasks GenAI (LLM Inference)
+    implementation("com.google.mediapipe:tasks-genai:0.10.14")
+
     // Room Database
     val roomVersion = "2.6.1"
     implementation("androidx.room:room-runtime:$roomVersion")

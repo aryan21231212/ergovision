@@ -92,7 +92,7 @@ class MainActivity : ComponentActivity() {
         val db = HazardDatabase.getInstance(this)
         repository = HazardRepository(db.hazardEventDao())
         ttsManager = TtsAlertManager(this)
-        llmCoach = LiteRtLmCoach().apply { initialize("models/gemma3_1b.bin") }
+        llmCoach = LiteRtLmCoach().apply { initialize(this@MainActivity, "/data/local/tmp/gemma3_1b.bin") }
         officeKitBridge = OfficeKitBridge(this)
         poseAnalyzer = RebaPoseAnalyzer()
 

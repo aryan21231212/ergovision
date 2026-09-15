@@ -1,6 +1,8 @@
 package com.ergovision.app.llm
 
+import android.content.Context
 import com.ergovision.app.data.entity.HazardEvent
+import com.google.mediapipe.tasks.genai.llminference.LlmInference
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -44,19 +46,37 @@ data class EhsAuditMetrics(
  */
 class LiteRtLmCoach {
 
+    private var llmInference: LlmInference? = null
     private var isModelLoaded = false
 
-    fun initialize(modelPath: String) {
-        // Initializes Google LiteRT-LM runtime on Qualcomm NPU/GPU
-        isModelLoaded = true
+    fun initialize(context: Context, modelPath: String) {
+        try {
+            val options = LlmInference.LlmInferenceOptions.builder()
+                .setModelPath(modelPath)
+                .build()
+            llmInference = LlmInference.createFromOptions(context, options)
+            isModelLoaded = true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            isModelLoaded = false
+        }
     }
 
     suspend fun generateCoachingAdvice(event: HazardEvent): String = withContext(Dispatchers.Default) {
-        if (!isModelLoaded) {
-            return@withContext "Maintain an upright spine and take scheduled micro-breaks."
+        if (!isModelLoaded || llmInference == null) {
+            return@withContext getFallbackAdvice(event)
         }
 
-        when (event.hazardType.name) {
+        try {
+            val prompt = "You are an ergonomic coach. The user just exhibited the following hazard: ${event.hazardType.name} with peak angle ${event.peakAngleDegrees}°. Give a short 1-sentence tip on how to correct this posture."
+            llmInference?.generateResponse(prompt) ?: getFallbackAdvice(event)
+        } catch (e: Exception) {
+            getFallbackAdvice(event)
+        }
+    }
+    
+    private fun getFallbackAdvice(event: HazardEvent): String {
+        return when (event.hazardType.name) {
             "TRUNK_FLEXION_SEVERE" -> "Gently align your spine and elevate your workbench surface."
             "SHOULDER_ABDUCTION" -> "Keep your elbows close to your torso while assembling parts."
             "NECK_FLEXION" -> "Lift your chin and adjust line-of-sight toward component fixtures."
