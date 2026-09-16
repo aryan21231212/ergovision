@@ -77,15 +77,16 @@ class RebaPoseAnalyzer {
         val neckFlexionAngle = VectorMath.angleBetween(neckVector, trunkVector)
 
         // 3. Upper Arm Abduction: Shoulder -> Elbow vs Trunk 
-        // We project to the 2D Coronal Plane (X, Y only) by setting Z=0.
-        // This prevents false positives when reaching forward (Z-axis) to hold the phone in front camera mode.
+        // We project to the 2D Coronal Plane (X, Y only) by setting Z=0 to ignore forward reaching.
+        // CRITICAL FIX: The trunkVector points UP (shoulder - hip), but the arm vector points DOWN (elbow - shoulder).
+        // To get the correct angle (0 when arms hang down), we must compare against a DOWNWARD trunk vector.
         val leftArm2D = Point3D(worldLandmarks[LEFT_ELBOW].x - worldLandmarks[LEFT_SHOULDER].x, worldLandmarks[LEFT_ELBOW].y - worldLandmarks[LEFT_SHOULDER].y, 0f)
         val rightArm2D = Point3D(worldLandmarks[RIGHT_ELBOW].x - worldLandmarks[RIGHT_SHOULDER].x, worldLandmarks[RIGHT_ELBOW].y - worldLandmarks[RIGHT_SHOULDER].y, 0f)
-        val trunkVector2D = Point3D(trunkVector.x, trunkVector.y, 0f)
+        val trunkVectorDown2D = Point3D(-trunkVector.x, -trunkVector.y, 0f)
 
         val armAbductionAngle = maxOf(
-            VectorMath.angleBetween(leftArm2D, trunkVector2D),
-            VectorMath.angleBetween(rightArm2D, trunkVector2D)
+            VectorMath.angleBetween(leftArm2D, trunkVectorDown2D),
+            VectorMath.angleBetween(rightArm2D, trunkVectorDown2D)
         )
 
         // Apply EMA Smoothing
