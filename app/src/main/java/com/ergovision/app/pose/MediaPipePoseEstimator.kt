@@ -33,15 +33,16 @@ class MediaPipePoseEstimator(
     private fun initializePoseLandmarker() {
         try {
             val baseOptions = BaseOptions.builder()
-                .setModelAssetPath("pose_landmarker_lite.task")
+                .setModelAssetPath("pose_landmarker_full.task")
                 .setDelegate(Delegate.GPU) // Fast and stable on Adreno GPUs
                 .build()
 
             val options = PoseLandmarker.PoseLandmarkerOptions.builder()
                 .setBaseOptions(baseOptions)
                 .setRunningMode(RunningMode.LIVE_STREAM)
-                .setMinPoseDetectionConfidence(0.5f)
-                .setMinTrackingConfidence(0.5f)
+                .setMinPoseDetectionConfidence(0.7f)
+                .setMinTrackingConfidence(0.7f)
+                .setMinPosePresenceConfidence(0.7f)
                 .setResultListener { result: PoseLandmarkerResult, _: MPImage ->
                     val timestamp = SystemClock.elapsedRealtime()
                     // Extract 3D World Landmarks (metric coordinates, hip-origin) for REBA math
@@ -70,13 +71,16 @@ class MediaPipePoseEstimator(
     private fun tryFallbackToCpu() {
         try {
             val baseOptions = BaseOptions.builder()
-                .setModelAssetPath("pose_landmarker_lite.task")
+                .setModelAssetPath("pose_landmarker_full.task")
                 .setDelegate(Delegate.CPU)
                 .build()
 
             val options = PoseLandmarker.PoseLandmarkerOptions.builder()
                 .setBaseOptions(baseOptions)
                 .setRunningMode(RunningMode.LIVE_STREAM)
+                .setMinPoseDetectionConfidence(0.7f)
+                .setMinTrackingConfidence(0.7f)
+                .setMinPosePresenceConfidence(0.7f)
                 .setResultListener { result: PoseLandmarkerResult, _: MPImage ->
                     val timestamp = SystemClock.elapsedRealtime()
                     val worldLandmarks = result.worldLandmarks().firstOrNull()?.map { lm ->

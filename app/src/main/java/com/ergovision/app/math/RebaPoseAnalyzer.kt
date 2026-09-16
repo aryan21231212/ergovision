@@ -28,6 +28,13 @@ class RebaPoseAnalyzer {
     // Vertical gravity reference vector (Y is down in MediaPipe space, so -Y is up)
     private val verticalVector = Point3D(0f, -1f, 0f)
     private var baselineTrunkOffset: Float = 0f
+    
+    // EMA Smoothing State
+    private var isFirstFrame = true
+    private var smoothedTrunk: Float = 0f
+    private var smoothedNeck: Float = 0f
+    private var smoothedShoulder: Float = 0f
+    private val emaAlpha = 0.2f // 20% new value, 80% old value for smooth transition
 
     fun calibrateBaseline(offset: Float) {
         baselineTrunkOffset = offset
@@ -35,11 +42,12 @@ class RebaPoseAnalyzer {
 
     fun resetCalibration() {
         baselineTrunkOffset = 0f
+        isFirstFrame = true
     }
 
     fun analyze(worldLandmarks: List<Point3D>, timestampMs: Long): PostureMetrics {
         if (worldLandmarks.size < 25) {
-            return PostureMetrics(timestampMs, 0f, 0f, 0f, 0f, null)
+            return PostureMetrics(timestampMs, smoothedTrunk, smoothedNeck, smoothedShoulder, 0f, null)
         }
 
         // Mid-points for robust side-view torso calculation
@@ -76,25 +84,37 @@ class RebaPoseAnalyzer {
             VectorMath.angleBetween(rightArm, trunkVector)
         )
 
+        // Apply EMA Smoothing
+        if (isFirstFrame) {
+            smoothedTrunk = trunkFlexionAngle
+            smoothedNeck = neckFlexionAngle
+            smoothedShoulder = armAbductionAngle
+            isFirstFrame = false
+        } else {
+            smoothedTrunk = (emaAlpha * trunkFlexionAngle) + ((1f - emaAlpha) * smoothedTrunk)
+            smoothedNeck = (emaAlpha * neckFlexionAngle) + ((1f - emaAlpha) * smoothedNeck)
+            smoothedShoulder = (emaAlpha * armAbductionAngle) + ((1f - emaAlpha) * smoothedShoulder)
+        }
+
         // Evaluate REBA Risk Score
         var riskScore = 0f
         var detectedHazard: HazardType? = null
 
-        if (trunkFlexionAngle > 60f) {
+        if (smoothedTrunk > 60f) {
             riskScore += 3.0f
             detectedHazard = HazardType.TRUNK_FLEXION_SEVERE
-        } else if (trunkFlexionAngle > 20f) {
+        } else if (smoothedTrunk > 20f) {
             riskScore += 1.5f
             detectedHazard = HazardType.TRUNK_FLEXION_MODERATE
         }
 
-        if (neckFlexionAngle > 20f) {
+        if (smoothedNeck > 20f) {
             riskScore += 1.0f
             if (detectedHazard == null) detectedHazard = HazardType.NECK_FLEXION
             else detectedHazard = HazardType.COMPOUND_STRAIN
         }
 
-        if (armAbductionAngle > 90f) {
+        if (smoothedShoulder > 90f) {
             riskScore += 2.0f
             if (detectedHazard == null) detectedHazard = HazardType.SHOULDER_ABDUCTION
             else detectedHazard = HazardType.COMPOUND_STRAIN
@@ -102,9 +122,9 @@ class RebaPoseAnalyzer {
 
         return PostureMetrics(
             timestampMs = timestampMs,
-            trunkAngleDegrees = trunkFlexionAngle,
-            neckAngleDegrees = neckFlexionAngle,
-            shoulderAngleDegrees = armAbductionAngle,
+            trunkAngleDegrees = smoothedTrunk,
+            neckAngleDegrees = smoothedNeck,
+            shoulderAngleDegrees = smoothedShoulder,
             rawHazardScore = riskScore,
             detectedHazard = detectedHazard
         )
